@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Architecture Overview Template</title>
+  <style>
+    :root {
+      --navy: #173b73;
+      --blue: #2468b4;
+      --teal: #0f8a8a;
+      --purple: #5b4bb7;
+      --green: #18866b;
+      --sky: #0a7faa;
+      --line: #b8c7d9;
+      --text: #17324d;
+      --muted: #5d6b7a;
+      --surface: #ffffff;
+      --page: #f4f7fb;
+      --soft-blue: #eef5ff;
+      --soft-teal: #eefaf9;
+      --soft-purple: #f4f1ff;
+      --soft-green: #effaf5;
+      --soft-sky: #eef8fc;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--page);
+      color: var(--text);
+      font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+    }
+
+    .page {
+      width: min(1600px, calc(100% - 32px));
+      margin: 24px auto;
+      background: var(--surface);
+      border: 1px solid #dce4ee;
+      border-radius: 18px;
+      box-shadow: 0 16px 44px rgba(25, 51, 84, 0.10);
+      overflow: hidden;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 24px;
+      align-items: start;
+      padding: 30px 36px 22px;
+      border-top: 10px solid var(--navy);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 3vw, 48px);
+      line-height: 1.05;
+      color: var(--navy);
+      letter-spacing: -0.03em;
+    }
+
+    .subtitle {
+      margin-top: 10px;
+      font-size: 18px;
+      color: var(--muted);
+    }
+
+    .meta {
+      min-width: 280px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 14px;
+      line-height: 1.7;
+      background: #fbfdff;
+    }
+
+    .meta strong {
+      display: inline-block;
+      min-width: 120px;
+      color: var(--navy);
+    }
+
+    main {
+      padding: 0 36px 34px;
+    }
+
+    .layer {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      margin-top: 12px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: hidden;
+      break-inside: avoid;
+    }
+
+    .layer-label {
+      color: white;
+      padding: 22px;
+      display: flex;
+      gap: 15px;
+      align-items: flex-start;
+    }
+
+    .layer-label h2 {
+      margin: 0 0 8px;
+      font-size: 19px;
+      line-height: 1.15;
+    }
+
+    .layer-label p {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.35;
+      opacity: .92;
+    }
+
+    .icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(174, 166, 166, 0.95);
+      color: currentColor;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      font-size: 23px;
+      font-weight: 700;
+    }
+
+    .layer-body {
+      padding: 12px;
+    }
+
+    .cards {
+      display: grid;
+      gap: 12px;
+    }
+
+    .cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .cols-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+
+    .card {
+      min-height: 92px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 13px 14px;
+      background: white;
+    }
+
+    .card h3 {
+      margin: 0 0 7px;
+      font-size: 15px;
+      color: var(--navy);
+    }
+
+    .card p, .card li {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.4;
+      color: var(--text);
+    }
+
+    .card ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .wide { grid-column: 1 / -1; }
+
+    .service-list {
+      display: grid;
+      gap: 6px;
+    }
+
+    .service {
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 7px 10px;
+      background: rgba(255,255,255,.72);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .note {
+      margin-top: 12px;
+      padding: 12px 14px;
+      border: 1px dashed #94a8bf;
+      border-radius: 10px;
+      font-size: 13px;
+      color: var(--muted);
+      background: rgba(255,255,255,.65);
+    }
+
+    .user .layer-label { background: var(--navy); }
+    .user .layer-body { background: var(--soft-blue); }
+
+    .omni .layer-label { background: var(--teal); }
+    .omni .layer-body { background: var(--soft-teal); }
+
+    .integration .layer-label { background: var(--purple); }
+    .integration .layer-body { background: var(--soft-purple); }
+
+    .business .layer-label { background: #214d83; }
+    .business .layer-body { background: #f2f6fb; }
+
+    .data .layer-label { background: var(--green); }
+    .data .layer-body { background: var(--soft-green); }
+
+    .security .layer-label { background: var(--sky); }
+    .security .layer-body { background: var(--soft-sky); }
+
+    .platform .layer-label { background: var(--blue); }
+    .platform .layer-body { background: var(--soft-blue); }
+
+    footer {
+      padding: 16px 36px 28px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    [contenteditable="true"]:focus {
+      outline: 2px solid #4e8ad6;
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+
+    @media (max-width: 1050px) {
+      header { grid-template-columns: 1fr; }
+      .meta { min-width: 0; }
+      .layer { grid-template-columns: 1fr; }
+      .cols-5, .cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 680px) {
+      .page { width: 100%; margin: 0; border-radius: 0; }
+      header, main, footer { padding-left: 18px; padding-right: 18px; }
+      .cols-5, .cols-4, .cols-3, .cols-2 { grid-template-columns: 1fr; }
+    }
+
+    @media print {
+      body { background: white; }
+      .page {
+        width: 100%;
+        margin: 0;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+      }
+      header { padding-top: 18px; }
+      .layer { margin-top: 8px; }
+      .card { min-height: auto; }
+      @page { size: landscape; margin: 0.35in; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div>
+        <h1 contenteditable="true">Architecture Overview Zone 1</h1>
+        <div class="subtitle" contenteditable="true">
+          High-level logical view of Zone 1 showing major capabilities and how they work together.
+        </div>
+      </div>
+      <div class="meta">
+        <div><strong>Project / Solution:</strong> <span contenteditable="true">Enter name</span></div>
+        <div><strong>Version:</strong> <span contenteditable="true">0.1 Draft</span></div>
+        <div><strong>Date:</strong> <span contenteditable="true">MM/DD/YYYY</span></div>
+        <div><strong>Owner:</strong> <span contenteditable="true">Enter owner</span></div>
+      </div>
+    </header>
+
+    <main>
+      <section class="layer user">
+        <div class="layer-label">
+          <div class="icon">UI</div>
+          <div>
+            <h2 contenteditable="true">User Interaction Layer</h2>
+            <p contenteditable="true">How users and partners engage with the solution.</p>
+          </div>
+        </div>
+        <div class="layer-body">
+          <div class="cards cols-4">
+            <article class="card"><h3 contenteditable="true">User Devices</h3><p contenteditable="true">Virtual Desktop, Source Control, Agentic Communications</p></article>
+            <article class="card"><h3 contenteditable="true">Agency Area Administration</h3><p contenteditable="true">User Management, Workflow Management, Retention</p></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="layer omni">
+        <div class="layer-label">
+          <div class="icon">CX</div>
+          <div>
+            <h2 contenteditable="true">Omnichannel Experience Layer</h2>
+            <p contenteditable="true">Consistent, accessible experiences across channels.</p>
+          </div>
+        </div>
+        <div class="layer-body">
+          <div class="cards cols-4">
+            <article class="card"><h3 contenteditable="true">Personalization</h3><p contenteditable="true">Preferences, recommendations, language</p></article>
+            <article class="card"><h3 contenteditable="true">Accessibility</h3><p contenteditable="true">WCAG, assistive technologies</p></article>
+            <article class="card"><h3 contenteditable="true">Content Management</h3><p contenteditable="true">Forms, content, templates</p></article>
+            <article class="card"><h3 contenteditable="true">Omnichannel Services</h3><p contenteditable="true">Roles, permissions, context management</p></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="layer integration">
+        <div class="layer-label">
+          <div class="icon">IO</div>
+          <div>
+            <h2 contenteditable="true">Integration &amp; Orchestration Layer</h2>
+            <p contenteditable="true">Connects systems and manages APIs, events, and workflows.</p>
+          </div>
+        </div>
+        <div class="layer-body">
+          <div class="cards cols-5">
+            <article class="card"><h3 contenteditable="true">API Management</h3><p contenteditable="true">Gateways, security, lifecycle</p></article>
+            <article class="card"><h3 contenteditable="true">MCP Servers</h3><p contenteditable="true">Development and testing</p></article>
+            <article class="card"><h3 contenteditable="true">Workflow Automation</h3><p contenteditable="true">Orchestration and process automation</p></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="layer business">
+        <div class="layer-label">
+          <div class="icon">BS</div>
+          <div>
+            <h2 contenteditable="true">Business Services Layer</h2>
+            <p contenteditable="true">Core business capabilities delivered by the solution.</p>
+          </div>
+        </div>
+        <div class="layer-body">
+          <div class="cards cols-2">
+            <article class="card">
+              <h3 contenteditable="true">Business Capabilities / Services</h3>
+              <div class="service-list">
+                <div class="service" contenteditable="true">Capability / Service 1</div>
+                <div class="service" contenteditable="true">Capability / Service 2</div>
+                <div class="service" contenteditable="true">Capability / Service N</div>
+              </div>
+            </article>
+            <article class="card">
+              <h3 contenteditable="true">Shared Services</h3>
+              <div class="service-list">
+                <div class="service" contenteditable="true">Business Rules Engine</div>
+                <div class="service" contenteditable="true">Address Validation</div>
+                <div class="service" contenteditable="true">Notifications</div>
+                <div class="service" contenteditable="true">Document Management</div>
+                <div class="service" contenteditable="true">Scheduling</div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="layer data">
+        <div class="layer-label">
+          <div class="icon">DB</div>
+          <div>
+            <h2 contenteditable="true">Data Management Layer</h2>
+            <p contenteditable="true">Manages and governs data across the solution.</p>
+          </div>
+        </div>
+        <div class="layer-body">
+          <div class="cards cols-5">
+            <article class="card"><h3 contenteditable="true">Operational Databases</h3><p contenteditable="true">SQL, NoSQL, cache</p></article>
+            <article class="card"><h3 contenteditable="true">File / Blob Storage</h3><p contenteditable="true">Files, documents, media</p></article>
+            <article class="card"><h3 contenteditable="true">Data Repository / EDW</h3><p contenteditable="true">Warehouse, marts, analytics</p></article>
+            <article class="card"><h3 contenteditable="true">Master / Reference Data</h3><p contenteditable="true">Master entities and reference data</p></article>
+            <article class="card"><h3 contenteditable="true">Reporting &amp; Analytics</h3><p contenteditable="true">BI, AI, data lake, pipelines</p></article>
+          </div>
+          <div class="note" contenteditable="true"><strong>Data Governance:</strong> Catalog, quality, metadata, lineage, stewardship, retention, and policy.</div>
+        </div>
+      </section>
+
+      <section class="layer security">
+        <div class="layer-label">
+          <div class="icon">SH</div>
+          <div>
+            <h2 contenteditable="true">Security, Monitoring &amp; Governance Layer</h2>
+            <p contenteditable="true">Provides security, compliance, observability, and resilience.</p>
+          </div>
+        </div>
+        <div class="layer-body">
+          <div class="cards cols-4">
+            <article class="card"><h3 contenteditable="true">Identity &amp; Access Management</h3><p contenteditable="true">Workforce identity, customer identity, MFA</p></article>
+            <article class="card"><h3 contenteditable="true">Security Services</h3><p contenteditable="true">Zero Trust, encryption, key management</p></article>
+            <article class="card"><h3 contenteditable="true">Logging &amp; Monitoring</h3><p contenteditable="true">Logs, metrics, alerts, observability</p></article>
+            <article class="card"><h3 contenteditable="true">Compliance &amp; Risk</h3><p contenteditable="true">Policies, audits, vulnerability management, recovery</p></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="layer platform">
+        <div class="layer-label">
+          <div class="icon">CL</div>
+          <div>
+            <h2 contenteditable="true">Cloud / Platform Infrastructure Layer</h2>
+            <p contenteditable="true">Runs and supports the solution in the cloud or platform.</p>
+          </div>
+        </div>
+        <div class="layer-body">
+          <div class="cards cols-2">
+            <article class="card"><h3 contenteditable="true">DevSecOps Pipeline</h3><p contenteditable="true">CI/CD, testing, security scanning, artifact management</p></article>
+            <article class="card"><h3 contenteditable="true">Cloud Infrastructure Services</h3><p contenteditable="true">Compute, storage, networking, containers, managed services</p></article>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer contenteditable="true">
+      Template note: click any heading or description to edit it directly. Use your browser’s Print command to save the diagram as a PDF.
+    </footer>
+  </div>
+</body>
+</html>

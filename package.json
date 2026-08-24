@@ -1,0 +1,12 @@
+{
+  "name": "fwhtmlexample",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Single-file HTML architecture artifacts, edited in-browser, saved in-place.",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "devDependencies": {
+    "jsdom": "^29.1.1"
+  }
+}
