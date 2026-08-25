@@ -13,12 +13,15 @@ Open **`architecture-overview.html`** in Chrome or Edge. The page renders as
 a bounded engineering-style drawing:
 
 - A **title block** at the top left with the project name and subtitle.
-  Underneath is a **collapsed details row** carrying four identifying
-  fields (Project / Solution, Version, Date, Owner). Click the little
-  ▸ chevron next to it to expand for editing. When collapsed, whichever
-  values already have text show up as a compact `KEY value` chip row.
-  Printing always shows the details expanded, regardless of the on-screen
-  state.
+  Underneath, four identifying fields (Project / Solution, Version,
+  Date, Owner) show in **two different presentations** depending on
+  mode:
+  - **View mode** — a compact `KEY value · KEY value` chip row.
+    Non-empty values only. No editing controls, no space wasted.
+  - **Edit mode** — the full labelled form with an input for each
+    field and a format hint beneath.
+  Printing always shows the labelled form so a printout carries the
+  identifying metadata, no matter which mode you printed from.
 - A **status roll-up bar** — how many items are in each status bucket
   (Not assessed, Current, In progress, Planned, Gap).
 - A **stack of coloured layer bands**, each holding the items that belong
@@ -92,10 +95,11 @@ In Edit mode you can type directly over anything on the drawing:
 
 - **Title** and **subtitle** at the top.
 - Every value in the **title block** (Project / Version / Date / Owner).
-  Click the ▸ chevron to expand the details, then click into each field.
-  Format hints appear underneath each field. **The Date field
-  auto-fills to today's date** the first time you focus it while it's
-  empty — type over the value to change it, or leave it as-is.
+  The moment you flip to Edit mode, the compact chip row is replaced
+  by the labelled form — click into any field to type. Format hints
+  appear underneath each input. **The Date field auto-fills to today's
+  date** the first time you focus it while it's empty — type over the
+  value to change it, or leave it as-is.
 - Every **layer name** and its **description** — click, type, done.
 - Every **item name** and **description** — via the detail modal.
 
