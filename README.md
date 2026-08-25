@@ -12,7 +12,13 @@ transport without needing a server.
 2. Open it in Chrome or Edge.
 3. Flip the top toggle from **View** to **Edit** and start typing.
 
-That's the whole product.
+That's the whole product. The tracked file ships **empty** — you'll
+see the shell (title block, status roll-up, an empty diagram area with
+a "no layers yet" hint, and a notes textarea at the bottom). Click
+**+ Add** in the toolbar to create your first layer.
+
+Example drawings with dummy data will land in this repo later, so you
+can look at a realistic-looking sample without having to build one.
 
 ## What it looks like
 
@@ -50,9 +56,9 @@ running Chrome or Edge can open it and use it.
 
 ## Keeping a private working file
 
-The tracked `architecture-overview.html` always carries generic sample
-data (seven example layers). If you want to work on your own drawing
-without pushing it, copy the tracked file to a `-mine` name:
+The tracked `architecture-overview.html` ships empty. If you want to
+work on your own drawing without pushing it, copy the tracked file to
+a `-mine` name and start adding layers there:
 
 ```bash
 cp architecture-overview.html architecture-overview-mine.html
