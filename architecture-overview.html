@@ -335,9 +335,30 @@
   .sheet .tb-sub{ margin:6px 0 0; font-size:13.5px; color:var(--text-2); max-width:70ch; line-height:1.45 }
   .sheet .tb-meta{ margin:0; border-left:2px solid var(--card-border);
     padding-left:16px; min-width:0 }
-  /* View-mode compact chip row — reads as "KEY value · KEY value · …". */
+  /* Compact chip row — used both as a static block in view mode AND as a
+     clickable button in edit-collapsed mode. The button variant resets
+     appearance so it reads as a row of chips, not a browser button. */
   .sheet .tb-summary{ display:flex; flex-wrap:wrap; gap:4px 14px;
-    align-items:baseline; color:var(--text-2); font-size:12px; padding:2px 0 }
+    align-items:baseline; color:var(--text-2); font-size:12px; padding:2px 0;
+    background:none; border:0; font-family:inherit; text-align:left;
+    width:100% }
+  .sheet .tb-static{ cursor:default }
+  .sheet .tb-clickable{ cursor:pointer; border-radius:4px }
+  .sheet .tb-clickable:hover{ color:var(--text); background:rgba(0,0,0,.03) }
+  .sheet .tb-clickable:focus-visible{ outline:3px solid var(--focus);
+    outline-offset:3px }
+  .sheet .tb-caret{ color:var(--muted); font-size:11px; margin-right:2px;
+    flex:0 0 auto }
+  /* "Collapse" button shown when the form is open, so the user can put the
+     block back to a chip row without leaving edit mode. Small and muted so
+     it doesn't compete with the field inputs for attention. */
+  .sheet .tb-collapse{ appearance:none; background:none; border:0;
+    padding:2px 0 6px; font-family:inherit; font-size:10px; font-weight:700;
+    letter-spacing:1.2px; text-transform:uppercase; color:var(--muted);
+    cursor:pointer; display:inline-flex; align-items:center; gap:4px }
+  .sheet .tb-collapse:hover{ color:var(--text) }
+  .sheet .tb-collapse:focus-visible{ outline:3px solid var(--focus);
+    outline-offset:2px; border-radius:3px }
   .sheet .tb-chip{ color:var(--text); font-weight:600 }
   .sheet .tb-chip-k{ color:var(--muted); font-weight:700; text-transform:uppercase;
     font-size:9.5px; letter-spacing:1.2px; margin-right:5px }
@@ -477,9 +498,10 @@
     .sheet .kids>.node{ break-inside:avoid }
     .sheet .depth0{ break-inside:avoid }
     /* Print always shows the labelled title-block form (never the chip
-       summary), regardless of which mode the user was in on-screen.
+       summary or the collapse button), regardless of on-screen state.
        v-show sets style="display:none" inline; !important beats that. */
     .sheet .tb-summary{ display:none !important }
+    .sheet .tb-collapse{ display:none !important }
     .sheet .tb-detail{ display:grid !important; margin:0 !important }
   }
 /* SHEET-CSS */
@@ -714,19 +736,41 @@
                                        placeholder="One or two sentences describing what this drawing shows."></textarea><template v-else>{{ subtitle }}</template></p>
         </div>
         <!-- Title block metadata (Project / Version / Date / Owner).
-             Two presentations, chosen by mode: view = compact chip row
-             ("KEY value · KEY value"), edit = full labelled form for
-             typing into. Both branches live in the DOM (v-show, not v-if)
-             so the print stylesheet can force the details form visible
-             regardless of which one is currently on screen. -->
+             Three v-show branches, all direct children of .tb-meta so the
+             print stylesheet can override each:
+               1. mode !== 'edit'                  → static chip row (view)
+               2. mode === 'edit' && !tbOpen       → clickable chip row (edit, collapsed)
+               3. mode === 'edit' &&  tbOpen       → labelled form + Collapse button
+             Edit mode defaults to collapsed on every load; the user opts in
+             by clicking the summary to actually edit the metadata. -->
         <div class="tb-meta" v-if="titleBlock">
-          <div class="tb-summary" v-show="mode !== 'edit'">
+          <!-- 1. View mode: static chip row, no interaction. -->
+          <div class="tb-summary tb-static" v-show="mode !== 'edit'">
             <template v-for="(v,k) in titleBlock" :key="k">
               <span v-if="v" class="tb-chip"><span class="tb-chip-k">{{ k }}</span>{{ v }}</span>
             </template>
             <span v-if="!Object.values(titleBlock).some(v => v)" class="tb-empty">No details.</span>
           </div>
-          <dl class="tb-detail" v-show="mode === 'edit'">
+          <!-- 2. Edit mode, collapsed: clickable chip row that opens the form. -->
+          <button v-show="mode === 'edit' && !tbOpen" type="button"
+                  class="tb-summary tb-clickable"
+                  @click="tbOpen = true"
+                  title="Click to edit the project / version / date / owner fields.">
+            <span class="tb-caret" aria-hidden="true">▸</span>
+            <template v-for="(v,k) in titleBlock" :key="k">
+              <span v-if="v" class="tb-chip"><span class="tb-chip-k">{{ k }}</span>{{ v }}</span>
+            </template>
+            <span v-if="!Object.values(titleBlock).some(v => v)" class="tb-empty">Add project / version / date / owner…</span>
+          </button>
+          <!-- 3a. Edit mode, expanded: small button to collapse back to chips. -->
+          <button v-show="mode === 'edit' && tbOpen" type="button"
+                  class="tb-collapse"
+                  @click="tbOpen = false"
+                  title="Collapse the title block back to the compact summary row.">
+            <span class="tb-caret" aria-hidden="true">▾</span> Collapse
+          </button>
+          <!-- 3b. Edit mode, expanded: full labelled form. -->
+          <dl class="tb-detail" v-show="mode === 'edit' && tbOpen">
             <div class="tb-row" v-for="(v,k) in titleBlock" :key="k">
               <dt><label :for="'tb-'+k">{{ k }}</label></dt>
               <dd>
@@ -1634,6 +1678,12 @@ createApp({
   data(){
     return {
       mode:'view', modal:null, newComment:'', newFieldKey:'', newTag:'',
+      // Title block form expansion state. In view mode it's ignored (view
+      // always shows the compact chip row). In edit mode this drives the
+      // switch: collapsed → chip row (identical to view), expanded → full
+      // labelled form. Starts collapsed on every load so entering edit
+      // mode doesn't immediately push the diagram down.
+      tbOpen:false,
       dirty:false, boundName:null, savedFlash:'',
       // Exposed to modal templates so the swatch rows can iterate them.
       // Neither is reactive state — just static reference lookups.

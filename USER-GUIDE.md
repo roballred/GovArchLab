@@ -14,12 +14,12 @@ a bounded engineering-style drawing:
 
 - A **title block** at the top left with the project name and subtitle.
   Underneath, four identifying fields (Project / Solution, Version,
-  Date, Owner) show in **two different presentations** depending on
-  mode:
-  - **View mode** — a compact `KEY value · KEY value` chip row.
-    Non-empty values only. No editing controls, no space wasted.
-  - **Edit mode** — the full labelled form with an input for each
-    field and a format hint beneath.
+  Date, Owner) show as a compact `KEY value · KEY value` chip row —
+  in both View and Edit mode by default, so entering Edit mode doesn't
+  immediately push the diagram down. In Edit mode, the chip row is a
+  clickable button (a ▸ chevron marks it as expandable): click it to
+  open the full labelled form with an input for each field. Click the
+  **▾ Collapse** button above the form to fold it back to chips.
   Printing always shows the labelled form so a printout carries the
   identifying metadata, no matter which mode you printed from.
 - A **status roll-up bar** — how many items are in each status bucket
@@ -95,11 +95,12 @@ In Edit mode you can type directly over anything on the drawing:
 
 - **Title** and **subtitle** at the top.
 - Every value in the **title block** (Project / Version / Date / Owner).
-  The moment you flip to Edit mode, the compact chip row is replaced
-  by the labelled form — click into any field to type. Format hints
-  appear underneath each input. **The Date field auto-fills to today's
-  date** the first time you focus it while it's empty — type over the
-  value to change it, or leave it as-is.
+  In Edit mode, the chip row stays compact until you click it — the
+  ▸ chevron marks it as expandable. Once open, click into any field
+  to type; format hints appear underneath each input. **The Date field
+  auto-fills to today's date** the first time you focus it while it's
+  empty — type over the value to change it, or leave it as-is. Click
+  the ▾ Collapse button above the form to fold it back to chips.
 - Every **layer name** and its **description** — click, type, done.
 - Every **item name** and **description** — via the detail modal.
 
