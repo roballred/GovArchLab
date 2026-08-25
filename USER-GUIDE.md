@@ -255,10 +255,13 @@ gear when the subtree needs a different layout, frame, detail, or depth.
 
 ## Saving
 
-The toolbar has two save controls:
+The toolbar has these file controls in Edit mode:
 
 - **Save updated file** — writes your changes back into this same file.
 - **Save as…** — writes to a new file (a branch or backup).
+- **Import…** — loads the drawing from ANOTHER architecture-overview
+  file into this one. See [Migrating from an older
+  version](#migrating-from-an-older-version) below.
 
 ### The first-save flow
 
@@ -284,6 +287,44 @@ and who saved what when. You can proceed (overwrite theirs) or cancel and
 reload.
 
 This is best-effort — not real-time collaboration.
+
+## Migrating from an older version
+
+When a new version of `architecture-overview.html` ships (an engine
+update — new features, bug fixes), your existing drawings on the old
+version can move over in one click:
+
+1. Download the newer `architecture-overview.html` (or open the tracked
+   file on the current version).
+2. Flip to **Edit** mode.
+3. Click **Import…** in the toolbar and confirm the warning.
+4. Pick your older file in the file picker.
+5. The drawing loads into the new engine. The banner "built on engine
+   vN (now vM)" disappears on your next Save.
+6. Click **Save updated file** to persist. It writes into the file you
+   picked when you originally opened the newer version (or the current
+   file if you're editing it in place).
+
+**What comes across:** every layer, every item, every nested item,
+comments (with attribution and timestamps), tags, per-node highlights,
+per-parent renames, per-layer schema overrides, title, subtitle,
+title-block values, notes.
+
+**What does not come across:** the schema (level definitions) of the
+older file. The newer engine keeps its own schema. If you had
+customised your older file's schema — added fields, renamed levels —
+those changes stay in the old file and you'd have to redo them in the
+new one (or manually copy the `<script id="schema">` block over in a
+text editor).
+
+**What stays the same:** the file location you're saving into, and
+the file's identity (docId). "Import" replaces the CONTENT, not the
+FILE — it doesn't turn your file into the imported file.
+
+The Import button is Chrome/Edge-native via `showOpenFilePicker`;
+Firefox and Safari get an equivalent behaviour via a hidden file
+input — the UX is identical, the button just uses a different
+under-the-hood API.
 
 ## SharePoint / Teams workflow
 

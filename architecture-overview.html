@@ -696,6 +696,13 @@
       <button class="btn primary" @click="openAdd(null, 0)" title="Add item">+ Add</button>
       <button class="btn primary" @click="saveFile(false)" :title="boundName ? ('Save changes to ' + boundName + '. The browser may ask once per tab-open to reconfirm access; after that, saves are silent and in-place.') : 'First save: pick this file in the dialog to bind it. Subsequent saves in this tab (and future opens of the same file) will write straight to disk in Chrome/Edge. Other browsers download a copy instead.'">{{ boundName ? 'Save → ' + boundName : 'Save updated file' }}</button>
       <button class="btn" v-if="canPickFile" @click="saveFile(true)" title="Pick a different file to write to instead of overwriting the current one">Save as…</button>
+      <button class="btn" @click="importFromFile"
+              title="Load the drawing (layers, items, comments, title block, notes) from another architecture-overview.html file into this one. Use this to migrate content from an older engine version to a newer one. Schema and file location stay as-is.">Import…</button>
+      <!-- Fallback file picker for Firefox / Safari (no showOpenFilePicker).
+           Hidden off-screen; importFromFile() clicks it programmatically. -->
+      <input type="file" ref="importInput" accept=".html,.htm,text/html"
+             style="position:absolute;left:-9999px;top:0;width:1px;height:1px;overflow:hidden"
+             aria-hidden="true" tabindex="-1">
       <span class="dirty" v-if="dirty"><span class="d"></span>unsaved changes</span>
       <span class="saved" v-if="savedFlash">&#10003; {{ savedFlash }}</span>
       <button type="button" class="whoami" @click="askAuthor(true)" title="Change the name your edits and comments are attributed to (stored in your browser only, not in the file)">{{ author ? 'You: ' + author : 'Set your name' }}<span class="sr-only"> — used to attribute your edits and comments</span></button>
@@ -2276,7 +2283,101 @@ createApp({
       const d = String(now.getDate()).padStart(2, '0');
       this.titleBlock[k] = y + '-' + m + '-' + d;
     },
-    flash(msg){ this.savedFlash = msg; clearTimeout(this._flashT); this._flashT = setTimeout(()=>{ this.savedFlash=''; }, 4000); }
+    flash(msg){ this.savedFlash = msg; clearTimeout(this._flashT); this._flashT = setTimeout(()=>{ this.savedFlash=''; }, 4000); },
+
+    // Import the drawing from another architecture-overview.html file. Used
+    // to migrate content across engine versions — the OLD file's seed-data
+    // block gets extracted and loaded into THIS file's engine, so the user
+    // gets their nodes / title / notes / comments on the new engine's
+    // renderer + schema. The imported file's own schema is NOT applied
+    // (keeps this file's schema, which is presumably the newer one). The
+    // file location and its own docId stay too, so subsequent saves write
+    // to THIS file, not the imported one.
+    async importFromFile(){
+      if (this.mode !== 'edit') { this.mode = 'edit'; }
+      if (!confirm(
+        'Import will REPLACE the current drawing:\n' +
+        '  • Layers, items, comments, tags\n' +
+        '  • Title, subtitle, notes\n' +
+        '  • Title block (project / version / date / owner)\n\n' +
+        'What stays as-is: the schema (level definitions), the file you save into, and the docId.\n\n' +
+        'Continue?'
+      )) return;
+
+      // Get a File object either via showOpenFilePicker (Chrome/Edge) or
+      // via the hidden <input type="file"> (Firefox/Safari fallback).
+      let file = null;
+      try {
+        if (typeof window.showOpenFilePicker === 'function') {
+          const [handle] = await window.showOpenFilePicker({
+            types: [{ description:'Architecture Overview HTML',
+                      accept:{ 'text/html':['.html','.htm'] } }],
+            multiple: false
+          });
+          file = await handle.getFile();
+        } else {
+          file = await new Promise(resolve => {
+            const input = this.$refs.importInput;
+            if (!input) return resolve(null);
+            const onChange = () => {
+              input.removeEventListener('change', onChange);
+              resolve(input.files && input.files[0]);
+            };
+            input.addEventListener('change', onChange);
+            input.value = '';
+            input.click();
+          });
+        }
+      } catch (e) {
+        if (e && e.name === 'AbortError') return; // user cancelled
+        alert('Could not open the file: ' + (e.message || e));
+        return;
+      }
+      if (!file) return;
+      try {
+        await this._applyImportedFile(file);
+      } catch (e) {
+        alert('Import failed: ' + (e.message || e));
+      }
+    },
+    async _applyImportedFile(file){
+      const html = await file.text();
+      const seedMatch = html.match(
+        /<script type="application\/json" id="seed-data">([\s\S]*?)<\/script>/);
+      if (!seedMatch) throw new Error(
+        'No seed-data block found in ' + file.name + '. Is this an architecture-overview HTML file?');
+
+      let seed;
+      try { seed = JSON.parse(seedMatch[1].trim()); }
+      catch (e) { throw new Error('seed-data JSON is invalid: ' + e.message); }
+
+      // Apply the imported drawing. Preserve this file's docId and the
+      // rev counter — a save on the new engine bumps rev, which is fine
+      // as "next version after import" semantics. engineVersion snaps to
+      // the current engine so the "built on older engine" banner clears.
+      const importedMeta = seed.meta || {};
+      this.title       = seed.title       || '';
+      this.subtitle    = seed.subtitle    || '';
+      this.boardNotes  = seed.boardNotes  || '';
+      this.titleBlock  = seed.titleBlock  ? JSON.parse(JSON.stringify(seed.titleBlock)) : null;
+      this.titleBlockHelp = seed.titleBlockHelp
+        ? JSON.parse(JSON.stringify(seed.titleBlockHelp)) : null;
+      this.blocks      = Array.isArray(seed.blocks) ? seed.blocks : [];
+      this.nodes       = Array.isArray(seed.nodes)  ? seed.nodes  : [];
+      this.meta = Object.assign({}, this.meta, {
+        schemaVersion: importedMeta.schemaVersion || this.meta.schemaVersion,
+        engineVersion: ENGINE_VERSION,
+        rev:           typeof importedMeta.rev === 'number' ? importedMeta.rev : 0,
+        updatedBy:     importedMeta.updatedBy || '',
+        updatedAt:     importedMeta.updatedAt || '',
+        history:       Array.isArray(importedMeta.history) ? importedMeta.history.slice() : []
+      });
+      this.dirty = true;
+      const nodeCount = this.nodes.length;
+      const depth1Count = (function(l){ let n=0; l.forEach(x=>{ n+=(x.children||[]).length; }); return n; })(this.nodes);
+      this.flash('Imported ' + nodeCount + ' top-level and ' + depth1Count +
+                 ' nested item(s) from ' + file.name + '. Click Save updated file to persist.');
+    }
   }
 }).mount('#app');
 
