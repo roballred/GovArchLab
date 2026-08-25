@@ -1,28 +1,13 @@
-# Historical artifacts from earlier iterations — kept locally for
-# reference but not shared publicly (some carry organisation-specific
-# content that predates the consolidated GovArchLab shape).
-archive/
+# Private working copies. The tracked architecture-overview.html always
+# carries generic sample data; save your own drawing to a `-mine.html`
+# copy in the same folder and it stays out of git.
+*-mine.html
+.local-*.html
 
-# Node
-node_modules/
-npm-debug.log
-yarn-error.log
-
-# Local / private working copies of the deliverable — the tracked
-# v2/architecture-overview.html always carries generic sample data;
-# anything named with a "-mine" suffix (or a leading dot) is treated
-# as a private working file that the author edits and saves for their
-# own use. Add your own patterns here for any other private variants.
-v2/*-mine.html
-v2/.local-*.html
-v2/.local-*.json
-
-# macOS / editor litter
+# macOS metadata
 .DS_Store
-*.swp
-*.swo
-.idea/
-.vscode/
 
-# Node/build artefacts we don't want in the repo
-*.log
+# Editor / tooling directories
+.claude/
+.vscode/
+.idea/
