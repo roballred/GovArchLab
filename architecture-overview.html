@@ -333,8 +333,26 @@
     text-transform:none; color:var(--text); line-height:1.1;
   }
   .sheet .tb-sub{ margin:6px 0 0; font-size:13.5px; color:var(--text-2); max-width:70ch; line-height:1.45 }
-  .sheet .tb-meta{ margin:0; display:grid; grid-template-columns:auto minmax(240px, 1fr); gap:2px 14px;
-    border-left:2px solid var(--card-border); padding-left:16px; min-width:340px }
+  .sheet .tb-meta{ margin:0; border-left:2px solid var(--card-border);
+    padding-left:16px; min-width:0 }
+  /* Compact chip-row summary. Reads as "KEY value · KEY value · …" so the
+     identity of the drawing is visible without expanding, but doesn't
+     eat vertical space. Click anywhere on the row to toggle. */
+  .sheet .tb-toggle{ appearance:none; background:none; border:0; padding:0;
+    font-family:inherit; text-align:left; cursor:pointer;
+    display:flex; flex-wrap:wrap; gap:4px 14px; align-items:baseline;
+    color:var(--text-2); font-size:12px; width:100% }
+  .sheet .tb-toggle:hover{ color:var(--text) }
+  .sheet .tb-toggle:focus-visible{ outline:3px solid var(--focus); outline-offset:3px;
+    border-radius:4px }
+  .sheet .tb-caret{ color:var(--muted); font-size:11px; margin-right:2px }
+  .sheet .tb-chip{ color:var(--text); font-weight:600 }
+  .sheet .tb-chip-k{ color:var(--muted); font-weight:700; text-transform:uppercase;
+    font-size:9.5px; letter-spacing:1.2px; margin-right:5px }
+  .sheet .tb-empty{ color:var(--faint); font-style:italic; font-weight:400 }
+  /* Expanded form — same grid the read-only view used before. */
+  .sheet .tb-detail{ margin:8px 0 0; padding:0; display:grid;
+    grid-template-columns:auto minmax(240px, 1fr); gap:2px 14px }
   .sheet .tb-row{ display:contents }
   .sheet .tb-meta dt{ font-size:9.5px; letter-spacing:1.2px; text-transform:uppercase;
     color:var(--muted); font-weight:700; align-self:center }
@@ -466,6 +484,11 @@
     .sheet .legendbar{ background:#eef3fa }
     .sheet .kids>.node{ break-inside:avoid }
     .sheet .depth0{ break-inside:avoid }
+    /* Force the collapsed title-block details open so a printout still
+       carries the identifying metadata. v-show sets style="display:none"
+       inline; !important beats that (Vue's inline is non-important). */
+    .sheet .tb-toggle{ display:none !important }
+    .sheet .tb-detail{ display:grid !important; margin-top:0 !important }
   }
 /* SHEET-CSS */
 
@@ -691,20 +714,44 @@
                                        title="One or two sentences describing what this drawing shows and who it's for."
                                        placeholder="One or two sentences describing what this drawing shows."></textarea><template v-else>{{ subtitle }}</template></p>
         </div>
-        <dl class="tb-meta" v-if="titleBlock">
-          <div class="tb-row" v-for="(v,k) in titleBlock" :key="k">
-            <dt><label v-if="mode==='edit'" :for="'tb-'+k">{{ k }}</label><template v-else>{{ k }}</template></dt>
-            <dd>
-              <input v-if="mode==='edit'" class="tb-in" :id="'tb-'+k" :value="v"
-                     :title="'The ' + k.toLowerCase() + ' for this drawing'"
-                     :placeholder="'Enter ' + k.toLowerCase()"
-                     @input="titleBlock[k] = $event.target.value">
-              <template v-else>{{ v }}</template>
-              <!-- Always-visible format hint under the input in edit mode. -->
-              <p v-if="mode==='edit' && titleBlockHint(k)" class="tb-hint">{{ titleBlockHint(k) }}</p>
-            </dd>
-          </div>
-        </dl>
+        <!-- Title block metadata (Project / Version / Date / Owner).
+             Collapsed by default: a compact chip row (KEY value · KEY value)
+             sits under the title, click to expand the full labelled form.
+             The full form is the same dl/dt/dd the read-only view uses so
+             CSS and semantics don't fork. -->
+        <div class="tb-meta" v-if="titleBlock">
+          <button type="button" class="tb-toggle" @click="tbOpen = !tbOpen"
+                  :aria-expanded="String(tbOpen)"
+                  :title="tbOpen ? 'Collapse the title block details' : 'Expand to edit Project / Version / Date / Owner'">
+            <span class="tb-caret" aria-hidden="true">{{ tbOpen ? '▾' : '▸' }}</span>
+            <template v-if="!tbOpen">
+              <template v-for="(v,k) in titleBlock" :key="k">
+                <span v-if="v" class="tb-chip"><span class="tb-chip-k">{{ k }}</span>{{ v }}</span>
+              </template>
+              <span v-if="!Object.values(titleBlock).some(v => v)" class="tb-empty">
+                {{ mode === 'edit' ? 'Add project / version / date / owner…' : 'No details.' }}
+              </span>
+            </template>
+            <template v-else>
+              <span class="tb-empty">Details</span>
+            </template>
+          </button>
+          <dl class="tb-detail" v-show="tbOpen">
+            <div class="tb-row" v-for="(v,k) in titleBlock" :key="k">
+              <dt><label v-if="mode==='edit'" :for="'tb-'+k">{{ k }}</label><template v-else>{{ k }}</template></dt>
+              <dd>
+                <input v-if="mode==='edit'" class="tb-in" :id="'tb-'+k" :value="v"
+                       :title="'The ' + k.toLowerCase() + ' for this drawing'"
+                       :placeholder="'Enter ' + k.toLowerCase()"
+                       @focus="onTitleBlockFocus(k)"
+                       @input="titleBlock[k] = $event.target.value">
+                <template v-else>{{ v }}</template>
+                <!-- Always-visible format hint under the input in edit mode. -->
+                <p v-if="mode==='edit' && titleBlockHint(k)" class="tb-hint">{{ titleBlockHint(k) }}</p>
+              </dd>
+            </div>
+          </dl>
+        </div>
       </div>
 
     <div class="summary" v-if="summary.length">
@@ -1598,6 +1645,11 @@ createApp({
   data(){
     return {
       mode:'view', modal:null, newComment:'', newFieldKey:'', newTag:'',
+      // Title block metadata (Project/Version/Date/Owner) is collapsed by
+      // default — it belongs at the top of the drawing but taking a whole
+      // block of vertical space above the diagram made the first fold feel
+      // buried. Users click the summary chip row to expand for editing.
+      tbOpen:false,
       dirty:false, boundName:null, savedFlash:'',
       // Exposed to modal templates so the swatch rows can iterate them.
       // Neither is reactive state — just static reference lookups.
@@ -2202,8 +2254,27 @@ createApp({
     fmtDate(iso){
       if (!iso) return '';
       const d = new Date(iso);
+      // Includes hour:minute since the "last saved" and comment stamps
+      // are useful with time-of-day granularity — same day is a common case.
+      // Locale-aware so users see it in their own conventions.
       return isNaN(d) ? String(iso)
-        : d.toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
+        : d.toLocaleString(undefined, { year:'numeric', month:'short', day:'numeric',
+                                        hour:'numeric', minute:'2-digit' });
+    },
+    // Auto-fill the Date field with today when the user focuses it empty.
+    // Only fires on inputs whose key matches /date/i so a renamed field
+    // like "Effective Date" still gets the auto-fill, but a "Version" or
+    // "Owner" input is left alone. Format is ISO YYYY-MM-DD to match the
+    // format hint under the input; the user can overwrite with free text.
+    onTitleBlockFocus(k){
+      if (this.mode !== 'edit') return;
+      if (!this.titleBlock || this.titleBlock[k]) return;
+      if (!/date/i.test(k)) return;
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const d = String(now.getDate()).padStart(2, '0');
+      this.titleBlock[k] = y + '-' + m + '-' + d;
     },
     flash(msg){ this.savedFlash = msg; clearTimeout(this._flashT); this._flashT = setTimeout(()=>{ this.savedFlash=''; }, 4000); }
   }

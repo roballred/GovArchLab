@@ -12,8 +12,13 @@ file itself. Save writes the changes back into the same file.
 Open **`architecture-overview.html`** in Chrome or Edge. The page renders as
 a bounded engineering-style drawing:
 
-- A **title block** at the top left with the project name, subtitle, and
-  four identifying fields (Project / Solution, Version, Date, Owner).
+- A **title block** at the top left with the project name and subtitle.
+  Underneath is a **collapsed details row** carrying four identifying
+  fields (Project / Solution, Version, Date, Owner). Click the little
+  ▸ chevron next to it to expand for editing. When collapsed, whichever
+  values already have text show up as a compact `KEY value` chip row.
+  Printing always shows the details expanded, regardless of the on-screen
+  state.
 - A **status roll-up bar** — how many items are in each status bucket
   (Not assessed, Current, In progress, Planned, Gap).
 - A **stack of coloured layer bands**, each holding the items that belong
@@ -87,7 +92,10 @@ In Edit mode you can type directly over anything on the drawing:
 
 - **Title** and **subtitle** at the top.
 - Every value in the **title block** (Project / Version / Date / Owner).
-  Format hints appear underneath each field.
+  Click the ▸ chevron to expand the details, then click into each field.
+  Format hints appear underneath each field. **The Date field
+  auto-fills to today's date** the first time you focus it while it's
+  empty — type over the value to change it, or leave it as-is.
 - Every **layer name** and its **description** — click, type, done.
 - Every **item name** and **description** — via the detail modal.
 
