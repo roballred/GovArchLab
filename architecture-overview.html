@@ -1321,7 +1321,14 @@ const NodeView = {
     // long unfolded page. Only an explicit `false` keeps it open.
     collapsed(){ return this.kids.length > 0 && this.node.collapsed !== false; },
     bg(){ return this.node.bg || 'transparent'; },
-    isLabeled(){ return this.lvl.layout === 'labeled' && this.kids.length > 0; },
+    // Layout is a schema decision, not a kid-count one — an empty labeled
+    // layer paints as a labeled layer (coloured spine, tinted body with a
+    // "no items yet" hint) so it doesn't briefly look like a generic
+    // "LAYER 1 / Untitled" card and then jump to a band when the first
+    // child is added. `collapsed` returns false when kids.length is 0, so
+    // the .is-collapsed class isn't applied and the bodycell stays
+    // visible for the empty hint.
+    isLabeled(){ return this.lvl.layout === 'labeled'; },
     subText(){ return this.app.subOf(this.node, this.depth); },
     // Whichever field feeds subText — needed so an inline edit can write
     // back to node[subField.key] rather than just showing the text.
@@ -1578,6 +1585,11 @@ const NodeView = {
         <div :id="'kids-'+node.id" class="kids" :class="childLvl.layout" :style="childStyle" v-if="kids.length" v-show="!collapsed">
           <node-view v-for="(c,i) in kids" :key="c.id" :node="c" :depth="depth+1" :index="i" :siblings="kids" :parent-bg="childBg" :top-level="topLevel"></node-view>
         </div>
+        <!-- Empty-state hint for a labeled layer with no children yet.
+             Kept as the same .empty style used by the sheet-level "No X
+             yet" note so an empty layer and an empty sheet read the same
+             way. The + button in the labelcell above is the way to add. -->
+        <div class="empty" v-else>No {{ childTypePlural.toLowerCase() }} yet.</div>
         <div class="xtra" v-for="x in extras" :key="x.key" style="padding:0 10px 10px"><b>{{ x.label }}:</b> {{ x.text }}</div>
       </div>
     </template>
