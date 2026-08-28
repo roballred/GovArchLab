@@ -1031,16 +1031,23 @@
           </div>
         </template>
 
+        <!-- Comments thread. In View (modal.readonly), the thread is
+             READ-ONLY: no × on individual comments, no add-a-comment
+             row. Without these gates, a reviewer opening the file to
+             read it could delete someone's comment (or add one) with
+             no Save affordance — the mutation writes onto the live node
+             immediately and would be persisted whenever anyone next
+             clicks Save updated file in the toolbar. See issue #8. -->
         <div class="comments">
-          <span class="clabel">Comments <span class="csaves">saved as you add them</span></span>
+          <span class="clabel">Comments <span class="csaves" v-if="!modal.readonly">saved as you add them</span></span>
           <div v-if="!(modal.data.comments && modal.data.comments.length)" class="ro" style="font-style:italic;color:var(--faint)">No comments yet.</div>
           <div v-for="(c,ci) in modal.data.comments" :key="ci" class="comment">
             {{ c.text }}
             <div class="cmeta" v-if="c.by || c.at">{{ c.by || 'unknown' }}<span v-if="c.at"> &middot; {{ fmtDate(c.at) }}</span></div>
-            <button type="button" class="cdel" @click="removeComment(ci)" :aria-label="'Delete comment by ' + (c.by || 'unknown')"
+            <button type="button" class="cdel" v-if="!modal.readonly" @click="removeComment(ci)" :aria-label="'Delete comment by ' + (c.by || 'unknown')"
                     :title="'Remove this comment by ' + (c.by || 'unknown')">&times;</button>
           </div>
-          <div class="addcomment"><label class="sr-only" for="new-comment">Add a comment</label><input id="new-comment" v-model="newComment" placeholder="Add a comment…" @keyup.enter="addComment"
+          <div class="addcomment" v-if="!modal.readonly"><label class="sr-only" for="new-comment">Add a comment</label><input id="new-comment" v-model="newComment" placeholder="Add a comment…" @keyup.enter="addComment"
               title="Attributed to your name. Press Enter or Add to post. Comments save immediately, before any other pending field edits."><button class="btn primary" @click="addComment" title="Post this comment to the node">Add</button></div>
         </div>
 
@@ -2120,19 +2127,24 @@ createApp({
       if (!this.modal || !Array.isArray(this.modal.data.tags)) return;
       this.modal.data.tags.splice(i, 1);
     },
-    // A comment is its own act, not part of a pending field edit. It commits
-    // straight away in both modes, so Cancel discards field changes without
-    // silently throwing away someone's review note.
+    // A comment is its own act in Edit, not part of a pending field edit.
+    // It commits straight away so Cancel discards field changes without
+    // silently throwing away someone's just-added review note. View is
+    // read-only for the whole thread — the template hides Add and × when
+    // modal.readonly, and the methods themselves refuse belt-and-braces
+    // so a stale template edit can't accidentally reopen the hole.
     commitComments(){
       if (this.modal.isNew) return;                 // node doesn't exist yet
       const hit = locate(this.nodes, this.modal.data.id);
       if (hit) hit.node.comments = [...(this.modal.data.comments || [])];
     },
     removeComment(ci){
+      if (this.modal.readonly) return;
       this.modal.data.comments.splice(ci, 1);
       this.commitComments();
     },
     addComment(){
+      if (this.modal.readonly) return;
       if (!this.newComment.trim()) return;
       this.askAuthor(false);
       if (!this.modal.data.comments) this.modal.data.comments = [];
