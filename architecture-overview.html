@@ -1319,7 +1319,21 @@ const NodeView = {
     // Undefined — a container never explicitly touched — defaults to
     // collapsed: an unfamiliar document opens showing its top level, not a
     // long unfolded page. Only an explicit `false` keeps it open.
-    collapsed(){ return this.kids.length > 0 && this.node.collapsed !== false; },
+    //
+    // View mode reads from a session-only override map (app.uiCollapsed[id])
+    // instead of touching node.collapsed, so a reviewer expanding bands to
+    // read the drawing doesn't mark the document dirty and doesn't persist
+    // their reading state into the shared file. When uiCollapsed[id] is
+    // undefined the fall-back is still the file's saved state — a
+    // reviewer's first look matches whatever the author saved.
+    collapsed(){
+      if (this.kids.length === 0) return false;
+      if (this.app.mode !== 'edit'){
+        const override = this.app.uiCollapsed[this.node.id];
+        if (override !== undefined) return !!override;
+      }
+      return this.node.collapsed !== false;
+    },
     bg(){ return this.node.bg || 'transparent'; },
     isLabeled(){ return this.lvl.layout === 'labeled' && this.kids.length > 0; },
     subText(){ return this.app.subOf(this.node, this.depth); },
@@ -1420,7 +1434,16 @@ const NodeView = {
   methods: {
     // Writes an explicit true/false onto the node itself — the opposite of
     // whatever's currently showing — so it round-trips through Save.
-    toggleCollapse(){ this.node.collapsed = !this.collapsed; },
+    // Edit mode writes node.collapsed (persists on Save). View mode writes
+    // the session-only app.uiCollapsed map instead — see the collapsed
+    // computed above.
+    toggleCollapse(){
+      if (this.app.mode !== 'edit'){
+        this.app.uiCollapsed[this.node.id] = !this.collapsed;
+        return;
+      }
+      this.node.collapsed = !this.collapsed;
+    },
     // Rename what THIS node calls its children. Writes onto the node so each
     // parent can hold a different label for the same depth — one Layer's
     // children can be "Services", another Layer's can be "Components",
@@ -1719,7 +1742,15 @@ createApp({
       // on the plain (pre-reactive) array, so the deep `nodes` watcher never
       // sees this as a user edit and flips `dirty` back to true after created().
       nodes: (() => { const ns = SEED.nodes || []; walk(ns, n => { n.comments = normComments(n.comments); }); return ns; })(),
-      boardNotes: SEED.boardNotes || ''
+      boardNotes: SEED.boardNotes || '',
+      // Session-only view-mode expand/collapse override. Keyed by node.id;
+      // value is a boolean (true = collapsed, false = expanded) OR undefined
+      // (fall back to the file's saved node.collapsed). Populated only by
+      // toggleCollapse in View — see NodeView. Never serialized. This is what
+      // stops a reviewer's read-through from flipping `dirty` and — worse —
+      // persisting their expand state into the shared file the next time
+      // someone Saves.
+      uiCollapsed: {}
     };
   },
   computed:{
