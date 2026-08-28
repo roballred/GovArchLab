@@ -2050,7 +2050,20 @@ createApp({
       const hit = locate(this.nodes, id);
       if (!hit) return;
       const kids = (hit.node.children || []).length;
-      if (kids && !confirm('This ' + this.levelLabel(hit.depth).toLowerCase() + ' has ' + kids + ' child item(s). Remove it and everything under it?')) return;
+      // Confirm EVERY delete, not just parents — the old rule confirmed only
+      // when kids > 0, so a childless item or an empty layer disappeared on
+      // a single × click with no chance to cancel. There is no undo (rev
+      // history stores stamps, not snapshots), so a mis-click here means
+      // reloading without Save or, if the file was already Saved, digging
+      // into SharePoint's version history.
+      const name = this.primaryOf(hit.node, hit.depth) || this.levelLabel(hit.depth);
+      const kindsLabel = this.levelLabel(hit.depth).toLowerCase();
+      const kidsLine = kids
+        ? '\n\nIt has ' + kids + ' child item(s), which will also be removed.'
+        : '';
+      if (!confirm('Remove this ' + kindsLabel + ' — "' + name + '"?' + kidsLine +
+                   '\n\nThis cannot be undone.'))
+        return;
       hit.list.splice(hit.index, 1);
       if (this.modal && this.modal.data && this.modal.data.id === id) this.closeModal();
     },
