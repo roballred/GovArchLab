@@ -731,7 +731,7 @@
           <h1><input v-if="mode==='edit'" class="hd-in hd-h1 sheet-h1" v-model="title" aria-label="Title"
                      title="The name of this drawing. Appears in the browser tab and at the top of the sheet."
                      placeholder="e.g. Architecture Overview"><template v-else>{{ title }}</template></h1>
-          <p class="tb-sub"><textarea v-if="mode==='edit'" class="hd-in hd-sub sheet-sub" v-model="subtitle" aria-label="Subtitle" rows="2"
+          <p class="tb-sub"><textarea v-if="mode==='edit'" v-autosize class="hd-in hd-sub sheet-sub" v-model="subtitle" aria-label="Subtitle" rows="2"
                                        title="One or two sentences describing what this drawing shows and who it's for."
                                        placeholder="One or two sentences describing what this drawing shows."></textarea><template v-else>{{ subtitle }}</template></p>
         </div>
@@ -1549,7 +1549,7 @@ const NodeView = {
              same rhythm as the title-block inline inputs. Clicking the field
              itself starts typing; the textarea stopPropagation so the click
              is never interpreted as expand/collapse. -->
-        <textarea v-if="app.mode==='edit' && subField" class="nsub nsub-in"
+        <textarea v-if="app.mode==='edit' && subField" v-autosize class="nsub nsub-in"
                   :placeholder="'Add a ' + subField.label.toLowerCase() + '…'"
                   :aria-label="subField.label + ' for ' + name0"
                   :title="'Short ' + subField.label.toLowerCase() + ' for ' + name0 + '. Kept concise for the drawing.'"
@@ -1637,7 +1637,7 @@ const NodeView = {
       <!-- full: every field laid out inline. Same inline-edit rule as the
            labeled branch — a textarea in edit mode, static <p> in view. -->
       <template v-else>
-        <textarea v-if="app.mode==='edit' && subField" class="nsub nsub-in"
+        <textarea v-if="app.mode==='edit' && subField" v-autosize class="nsub nsub-in"
                   :placeholder="'Add a ' + subField.label.toLowerCase() + '…'"
                   :aria-label="subField.label + ' for ' + name0"
                   :title="'Short ' + subField.label.toLowerCase() + ' for ' + name0 + '. Kept concise for the drawing.'"
@@ -1672,7 +1672,7 @@ const NodeView = {
   </div>`
 };
 
-createApp({
+const _app = createApp({
   components: { NodeView },
   provide(){ return { app: this }; },
   data(){
@@ -2406,7 +2406,37 @@ createApp({
                  ' nested item(s) from ' + file.name + '. Click Save updated file to persist.');
     }
   }
-}).mount('#app');
+});
+
+// v-autosize — grow a <textarea> to fit its content on every input and on
+// mount. Necessary because .hd-in / .nsub-in are `resize: none` +
+// `overflow: hidden` (so the drawing stays visually tidy); without JS
+// autosize, typing past ~one line is invisible even though the value
+// is captured. Fires on `input` for user typing, `mounted` for the
+// first paint of the value (import, initial load, mode switch), and
+// `updated` for value changes that don't produce an `input` event
+// (v-model reassignment from import, undo/redo).
+_app.directive('autosize', {
+  mounted(el){
+    const fit = () => {
+      // Height must be reset BEFORE reading scrollHeight, otherwise the
+      // box only ever grows — a paragraph pasted then shortened would
+      // stay at the old, tall size.
+      el.style.height = 'auto';
+      el.style.height = el.scrollHeight + 'px';
+    };
+    el._autosize = fit;
+    el.addEventListener('input', fit);
+    // Fit AFTER Vue paints the initial value; sizing against an empty
+    // textarea would leave the first render one line tall.
+    requestAnimationFrame(fit);
+  },
+  updated(el){ if (el._autosize) el._autosize(); },
+  unmounted(el){
+    if (el._autosize) el.removeEventListener('input', el._autosize);
+  }
+});
+_app.mount('#app');
 
 // -------------------------------------------------------------------------
 // Custom hover/focus tooltip. Reads from title="…" attributes already on
