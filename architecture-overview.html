@@ -2390,7 +2390,20 @@ createApp({
       this.titleBlockHelp = seed.titleBlockHelp
         ? JSON.parse(JSON.stringify(seed.titleBlockHelp)) : null;
       this.blocks      = Array.isArray(seed.blocks) ? seed.blocks : [];
-      this.nodes       = Array.isArray(seed.nodes)  ? seed.nodes  : [];
+      // Deep-copy the imported nodes before mutating them — `seed` is a
+      // JSON.parse of the imported file's seed-data block, and this is the
+      // only place we own it. Anything else that later inspects `seed`
+      // should see the original shape, not our normalization output.
+      this.nodes       = Array.isArray(seed.nodes)
+                           ? JSON.parse(JSON.stringify(seed.nodes))
+                           : [];
+      // Upgrade legacy bare-string comments to {text, by, at} objects, the
+      // same walk applied at initial load (data() above). Without this, an
+      // imported drawing whose comments predate attribution renders blank
+      // — the template reads c.text/c.by/c.at, all undefined on a string.
+      // normComments is idempotent, so re-importing a current file with
+      // object comments doesn't double-wrap.
+      walk(this.nodes, n => { n.comments = normComments(n.comments); });
       this.meta = Object.assign({}, this.meta, {
         schemaVersion: importedMeta.schemaVersion || this.meta.schemaVersion,
         engineVersion: ENGINE_VERSION,
