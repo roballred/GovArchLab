@@ -1209,6 +1209,48 @@ function normComments(list){
   return (list || []).map(c => (typeof c === 'string') ? { text:c, by:'', at:'' } : c);
 }
 
+// Legacy `blocks` array — prose notes that used to live above/below the
+// diagram, with a dedicated BlockList component. That UI was replaced by
+// the single boardNotes textarea at the bottom of the page; the array
+// stopped rendering but kept round-tripping through save. An old file
+// imported into the new engine would then have text stuck in `blocks`
+// with nowhere to show it — invisible-but-preserved data, which reads as
+// data loss to the user.
+//
+// This helper migrates blocks into boardNotes and empties the array, so
+// legacy prose lands in the Notes box on open or import. Idempotent: if
+// blocks is empty, no-op. Called at initial load (before data() reads
+// SEED) and inside _applyImportedFile. Legacy shapes covered:
+//   - {id, placement: 'above'|'below', text, heading?} — the last shape
+//     the BlockList component wrote
+//   - bare strings (very old drafts)
+//   - anything with a `text` or `body` field
+function migrateBlocksIntoNotes(seed){
+  if (!seed || !Array.isArray(seed.blocks) || !seed.blocks.length) return false;
+  // Order: "above" placement first, then unplaced, then "below". A best-guess
+  // reading order — the goal is a legible Notes box, not to reconstruct the
+  // pre-trim layout around the diagram.
+  const rank = { above: 0, below: 2 };
+  const sorted = seed.blocks.slice().sort((a, b) =>
+    (rank[a && a.placement] != null ? rank[a && a.placement] : 1) -
+    (rank[b && b.placement] != null ? rank[b && b.placement] : 1)
+  );
+  const chunks = sorted.map(b => {
+    if (b == null) return '';
+    if (typeof b === 'string') return b;
+    const heading = b.heading || b.title || '';
+    const text    = b.text    || b.body  || '';
+    const both    = [heading, text].filter(s => s && String(s).trim()).join('\n');
+    return both.trim();
+  }).filter(Boolean);
+  seed.blocks = [];
+  if (!chunks.length) return false;
+  const migrated = chunks.join('\n\n---\n\n');
+  const existing = (seed.boardNotes || '').trim();
+  seed.boardNotes = existing ? existing + '\n\n---\n\n' + migrated : migrated;
+  return true;
+}
+
 const PALETTE = [
   { accent:'#4db38a', bg:'#16281f' }, { accent:'#5b8dd6', bg:'#182234' },
   { accent:'#9b6dd6', bg:'#20182e' }, { accent:'#e0b24d', bg:'#2a2413' },
@@ -1276,6 +1318,10 @@ function locate(nodes, id){
 
 const SCHEMA = readBlock('schema', { strict:false, levels:[] });
 const SEED   = readBlock('seed-data', { title:'', subtitle:'', boardNotes:'', nodes:[] });
+// Migrate legacy `blocks` prose into boardNotes before Vue reads SEED, so
+// data() sees the merged notes and the empty blocks array — the app never
+// carries an invisible-but-preserved block through a session.
+migrateBlocksIntoNotes(SEED);
 
 // ---------------------------------------------------------------------------
 // One recursive component renders every depth. Container and item are the same
@@ -1284,10 +1330,12 @@ const SEED   = readBlock('seed-data', { title:'', subtitle:'', boardNotes:'', no
 // The old BlockList component (prose notes above/below the diagram) was
 // removed: the single boardNotes textarea at the bottom of the page covers
 // everything it did, without the toolbar clutter of Note above / Note
-// below buttons or a per-block editor. `blocks` still round-trips through
-// the seed data for files that were saved with the old shape, but nothing
-// renders those entries — the seed just carries `blocks: []` and always
-// will going forward.
+// below buttons or a per-block editor. Old files whose `blocks` array
+// still carried text are migrated into boardNotes at load and import
+// time (see migrateBlocksIntoNotes above), so no legacy prose is stuck
+// invisible in the JSON. New saves carry `blocks: []` for now — one
+// engine version of write-compatibility — and can drop the field entirely
+// once no in-the-wild copy needs it.
 
 // Neutral card outline, solved to 3:1 against the page. Kept in JS as well as
 // CSS because a nested node sits on its parent's tint, not the page, and the
@@ -2377,6 +2425,13 @@ createApp({
       let seed;
       try { seed = JSON.parse(seedMatch[1].trim()); }
       catch (e) { throw new Error('seed-data JSON is invalid: ' + e.message); }
+
+      // Same block-migration as at load: text stuck in the legacy `blocks`
+      // array of an imported file gets folded into boardNotes before we
+      // assign either. Without this, an old file's above/below notes
+      // survive the import in JSON but never render — the user sees an
+      // apparent data loss on notes they wrote.
+      migrateBlocksIntoNotes(seed);
 
       // Apply the imported drawing. Preserve this file's docId and the
       // rev counter — a save on the new engine bumps rev, which is fine
