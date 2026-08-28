@@ -1,15 +1,18 @@
 # GovArchLab — Architecture Overview Artifact
 
 A single self-contained HTML file for drafting, reviewing, and editing
-a **layered architecture overview** in a browser. Open it in Chrome or
-Edge, work in it, save — the changes are written back into the same
-`.html` file. Round-trips through email, SharePoint, or any other file
-transport without needing a server.
+a **layered architecture overview** in a browser. Open it in Chrome,
+Edge, Safari, or Firefox (desktop), work in it, save. In Chrome and
+Edge the changes are written back into the same `.html` file
+in-place; Safari and Firefox download a fresh copy of the modified
+file — same content, you replace the original manually. Round-trips
+through email, SharePoint, or any other file transport without
+needing a server.
 
 ## Try it
 
 1. Download **[architecture-overview.html](architecture-overview.html)**.
-2. Open it in Chrome or Edge.
+2. Open it in Chrome, Edge, Safari, or Firefox (desktop).
 3. Flip the top toggle from **View** to **Edit** and start typing.
 
 That's the whole product. The tracked file ships **empty** — you'll
@@ -52,7 +55,10 @@ LICENSE                      MIT
 
 `architecture-overview.html` is self-contained. Vue 3 is embedded
 inline; there is no CDN, no runtime dependency, no server. Anyone
-running Chrome or Edge can open it and use it.
+running a modern desktop browser (Chrome, Edge, Safari, or Firefox)
+can open it and use it. Chrome and Edge get save-in-place via the
+File System Access API; Safari and Firefox get download-a-copy on
+save (same data, manual file replacement).
 
 ## Keeping a private working file
 
@@ -93,7 +99,7 @@ clear sections):
 
 **Quick sanity check** after any edit — before committing:
 
-1. Reload the file in Chrome/Edge.
+1. Reload the file in Chrome, Edge, Safari, or Firefox.
 2. Confirm you don't see raw `{{ mustaches }}` on the page (Vue would
    have replaced them). If you do, the template didn't compile — check
    the browser console for the parse error.

@@ -9,8 +9,9 @@ file itself. Save writes the changes back into the same file.
 
 ## What you're looking at
 
-Open **`architecture-overview.html`** in Chrome or Edge. The page renders as
-a bounded engineering-style drawing:
+Open **`architecture-overview.html`** in Chrome, Edge, Safari, or
+Firefox (desktop). The page renders as a bounded engineering-style
+drawing:
 
 - A **title block** at the top left with the project name and subtitle.
   Underneath, four identifying fields (Project / Solution, Version,
@@ -344,7 +345,9 @@ client.
    `C:\Users\you\<tenant>\<library>\…` (Windows).
 2. **Open the file from that local path**, not from the SharePoint web
    view. Finder / File Explorer → the synced folder → double-click the
-   `.html`. It opens as a `file://` URL in Chrome or Edge.
+   `.html`. It opens as a `file://` URL in your default browser (any
+   of Chrome, Edge, Safari, or Firefox — see the Browser compatibility
+   section below for what differs by browser).
 3. Make your edits, click **Save updated file**.
 4. In the Save dialog (first time in a new tab), browse back to that same
    synced folder, select the same filename, confirm "Replace."
@@ -367,13 +370,25 @@ client.
 
 ## Browser compatibility
 
-- **Chrome and Edge** (desktop): full save-in-place as described above.
-  This is the only fully-supported combination.
-- **Firefox and Safari** (desktop): the file opens and edits normally,
-  but saving falls back to **downloading a fresh copy** to your
-  Downloads folder. You'd have to manually move it to overwrite the
-  original. The `Save as…` button is hidden in these browsers because
-  it's redundant with download.
+Every supported browser opens and edits the file identically — same
+drawing, same modal, same tags, same drag-to-reorder, same everything
+you can do to the content. What differs is only how **Save** works.
+
+- **Chrome and Edge** (desktop): **save-in-place** via the File System
+  Access API. First save picks the file; every save after that in the
+  same tab writes silently. Persistent handles remember the file
+  across page reloads.
+- **Safari** (desktop, macOS): opens and edits normally. Save
+  **downloads a fresh copy** of the modified file to your Downloads
+  folder. You replace the original manually (drag it into place, or
+  Save the download over the original from Safari's Downloads
+  window). The `Save as…` button is hidden because it's redundant
+  with download.
+- **Firefox** (desktop): same as Safari — save downloads a copy, no
+  in-place. Everything else works identically.
+
+The takeaway: use Safari or Firefox to view or lightly edit; use
+Chrome or Edge for anything with many save cycles.
 
 ## Print
 
@@ -419,10 +434,14 @@ Comments are the exception — they save as you add them (in-memory) so
 they'll be gone on reload too if you never Save, but Cancel on the modal
 doesn't discard them.
 
-**"The Save dialog opens even when I click Save updated file, every time."**
-Your browser might be blocking the File System Access API's persistent
-handles. Check that you're on Chrome or Edge, not a Chromium fork with
-security overrides.
+**"The Save dialog opens every time I click Save updated file, never in-place."**
+Save-in-place is Chrome / Edge only — the File System Access API
+they rely on isn't in Safari or Firefox. Those browsers download a
+fresh copy of the file on every save; you replace the original
+manually. On Chrome / Edge, if the Save dialog keeps opening rather
+than saving silently, either you're on a fork with security
+overrides that block persistent handles, or the browser is
+prompting to renew permission (once per tab-open is expected).
 
 **"I renamed a level and now half the labels didn't update."**
 Reload the tab (after saving). Most labels update reactively but a few
