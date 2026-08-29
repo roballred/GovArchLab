@@ -2222,6 +2222,13 @@ createApp({
       // gotten there yet, we'd otherwise show a needless picker.
       if (this.handleLoadPromise) { try { await this.handleLoadPromise; } catch(e){} }
       if (this.canPickFile){
+        // Snapshot of meta taken right before stampRevision so a write
+        // failure can undo the rev/history bump. Without this, a throw
+        // between stamp and successful close leaves memory one rev ahead of
+        // disk, and the download fallback stamps a SECOND time — the
+        // downloaded copy ends up two revs ahead of a file that never
+        // received either bump, which breaks the conflict guard forever.
+        let metaSnapshot = null;
         try {
           if (rebind){
             // Save as… always re-picks, regardless of any cached/persisted handle.
@@ -2253,6 +2260,7 @@ createApp({
               'Saving replaces their version. Continue?');
             if (!ok) return;
           }
+          metaSnapshot = JSON.parse(JSON.stringify(this.meta));
           this.stampRevision();
           const w = await fileHandle.createWritable();
           await w.write(this.buildFile()); await w.close();
@@ -2264,6 +2272,11 @@ createApp({
           return;
         } catch(e){
           if (e.name === 'AbortError') return;
+          // Roll back the stamp iff we actually stamped. metaSnapshot is
+          // null when the throw happened before stampRevision (picker,
+          // diskRevision, permission prompt), so the fall-through stamp
+          // below is the FIRST stamp for that call — no double-bump.
+          if (metaSnapshot) this.meta = metaSnapshot;
           // File went away underneath us (moved/deleted): drop the stored
           // handle so we don't try to reconnect to a phantom next time.
           if (e.name === 'NotFoundError' && this.meta.docId) {
