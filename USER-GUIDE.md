@@ -329,9 +329,13 @@ those changes stay in the old file and you'd have to redo them in the
 new one (or manually copy the `<script id="schema">` block over in a
 text editor).
 
-**What stays the same:** the file location you're saving into, and
-the file's identity (docId). "Import" replaces the CONTENT, not the
-FILE — it doesn't turn your file into the imported file.
+**What stays the same:** the file location you're saving into, this
+file's revision counter and history, and its docId. "Import" replaces
+the CONTENT, not the FILE — it doesn't turn your file into the
+imported file. Because the revision counter is preserved, the on-disk
+conflict guard keeps working; because history is preserved, the audit
+trail on this file stays honest (an "Imported from <name>" note is
+prepended so the pivot shows up).
 
 The Import button is Chrome/Edge-native via `showOpenFilePicker`;
 Firefox and Safari get an equivalent behaviour via a hidden file

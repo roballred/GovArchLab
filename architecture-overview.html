@@ -2411,7 +2411,9 @@ const _app = createApp({
         '  • Layers, items, comments, tags\n' +
         '  • Title, subtitle, notes\n' +
         '  • Title block (project / version / date / owner)\n\n' +
-        'What stays as-is: the schema (level definitions), the file you save into, and the docId.\n\n' +
+        'What stays as-is: the schema (level definitions), the file you\n' +
+        'save into, this file’s revision counter and history, and its\n' +
+        'docId (so the on-disk conflict guard keeps working).\n\n' +
         'Continue?'
       )) return;
 
@@ -2462,10 +2464,18 @@ const _app = createApp({
       try { seed = JSON.parse(seedMatch[1].trim()); }
       catch (e) { throw new Error('seed-data JSON is invalid: ' + e.message); }
 
-      // Apply the imported drawing. Preserve this file's docId and the
-      // rev counter — a save on the new engine bumps rev, which is fine
-      // as "next version after import" semantics. engineVersion snaps to
-      // the current engine so the "built on older engine" banner clears.
+      // Apply the imported drawing. This file's identity is preserved —
+      // docId, revision counter, updatedBy/updatedAt, schemaVersion, and
+      // history all stay with THIS file. A save after import stamps as
+      // this file's next revision, so the on-disk conflict guard keeps
+      // working. Only engineVersion snaps to the current engine so the
+      // "built on older engine" banner clears (that's what the migration
+      // path documents).
+      //
+      // The imported file's rev/history are NOT spliced in — those saves
+      // did not land on this file. An import-provenance note is prepended
+      // to this file's history instead, so the audit trail shows the
+      // pivot without falsifying who saved what.
       const importedMeta = seed.meta || {};
       this.title       = seed.title       || '';
       this.subtitle    = seed.subtitle    || '';
@@ -2475,14 +2485,14 @@ const _app = createApp({
         ? JSON.parse(JSON.stringify(seed.titleBlockHelp)) : null;
       this.blocks      = Array.isArray(seed.blocks) ? seed.blocks : [];
       this.nodes       = Array.isArray(seed.nodes)  ? seed.nodes  : [];
-      this.meta = Object.assign({}, this.meta, {
-        schemaVersion: importedMeta.schemaVersion || this.meta.schemaVersion,
-        engineVersion: ENGINE_VERSION,
-        rev:           typeof importedMeta.rev === 'number' ? importedMeta.rev : 0,
-        updatedBy:     importedMeta.updatedBy || '',
-        updatedAt:     importedMeta.updatedAt || '',
-        history:       Array.isArray(importedMeta.history) ? importedMeta.history.slice() : []
-      });
+      this.meta.engineVersion = ENGINE_VERSION;
+      const importedRev = typeof importedMeta.rev === 'number' ? importedMeta.rev : null;
+      this.meta.history = [{
+        rev: this.meta.rev,
+        by:  'Imported from ' + file.name +
+             (importedRev !== null ? ' (was rev ' + importedRev + ')' : ''),
+        at:  new Date().toISOString()
+      }].concat(this.meta.history || []).slice(0, 20);
       this.dirty = true;
       const nodeCount = this.nodes.length;
       const depth1Count = (function(l){ let n=0; l.forEach(x=>{ n+=(x.children||[]).length; }); return n; })(this.nodes);
