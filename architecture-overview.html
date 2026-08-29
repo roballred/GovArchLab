@@ -1803,7 +1803,12 @@ createApp({
     blocks:{deep:true,handler(){this.dirty=true;}},
     levels:{deep:true,handler(){this.dirty=true;}},
     titleBlock:{deep:true,handler(){this.dirty=true;}},
-    boardNotes(){this.dirty=true;}, title(){this.dirty=true;}, subtitle(){this.dirty=true;},
+    boardNotes(){this.dirty=true;},
+    // The drawing title drives the browser tab too, so an editor renaming
+    // the H1 sees the tab update without a Save. Empty title falls back to
+    // the generic "Architecture Overview" (never blank).
+    title(v){ this.dirty = true; document.title = v || 'Architecture Overview'; },
+    subtitle(){this.dirty=true;},
     // Drive the native dialog from state, so Escape and the close button agree.
     modal(v){
       const d = this.$refs.dlg; if (!d) return;
@@ -1812,6 +1817,11 @@ createApp({
     }
   },
   mounted(){
+    // Sync the tab title to the drawing title on load, so a file whose
+    // saved title differs from the static <title> tag ("Architecture
+    // Overview") shows the project name immediately, not only after the
+    // first edit.
+    document.title = this.title || 'Architecture Overview';
     window.addEventListener('beforeunload', e => { if(this.dirty){ e.preventDefault(); e.returnValue=''; } });
     // Reconnect to a previously-saved file handle for this document, if we
     // stored one in IndexedDB on an earlier save. We only fetch the handle
@@ -2214,16 +2224,23 @@ createApp({
     },
     fileName(){
       // If loaded from a file:// URL, use the actual filename on disk —
-      // even if it differs from the title's slug (someone may have renamed
-      // the file or copied it to a differently-named one). Falling back to
-      // a title-slug for other origins keeps the download-mode filename sane.
+      // even if it differs from the drawing title's slug (someone may
+      // have renamed the file or copied it to a differently-named one).
+      // Save-as should suggest the current name, not surprise the user
+      // with a Replace prompt against a fresh slug.
       try {
         if (location.protocol === 'file:') {
           const last = decodeURIComponent(location.pathname).split('/').pop();
           if (last && /\.html?$/i.test(last)) return last;
         }
       } catch(e){}
-      const slug = document.title.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+      // Other origins (http staging, blob download in Firefox/Safari):
+      // slug the DRAWING title, not document.title. document.title is
+      // kept in sync (see watch and mounted) so both are usually the
+      // same, but the drawing title is the authoritative source and
+      // doesn't depend on the DOM being wired yet.
+      const src = String(this.title || '').trim() || 'Architecture Overview';
+      const slug = src.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
       return (slug || 'artifact') + '.html';
     },
     // Ask once, remember, let it be changed. Attribution is worthless if it's
