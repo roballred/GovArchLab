@@ -180,7 +180,11 @@ The modal shows:
   discards it. Schema-declared fields (name, description, status) have
   no delete button here; those are the drawing's shape and should be
   changed via the schema JSON, not per-node.
-- The **comments thread**, with an add-a-comment input
+- The **comments thread**. In Edit, an add-a-comment input and a **✕**
+  on each comment. In View, the thread is read-only — no add row, no
+  ✕ — so a reviewer reading through the drawing can't accidentally
+  delete someone else's comment or add one that would silently ride
+  into the file on the next Save.
 
 ### Comments and attribution
 
