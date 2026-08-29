@@ -899,8 +899,8 @@
             <label for="f-parent">Parent</label>
             <select id="f-parent" v-model="modal.parentId"
                     title="Move this node under a different parent — or to the top level. Descendants come along.">
-              <option :value="null">— top level —</option>
-              <option v-for="p in parentChoices(modal.data.id)" :key="p.id" :value="p.id">
+              <option :value="null" v-if="modal.depth === 0">— top level —</option>
+              <option v-for="p in parentChoices(modal.data.id, modal.depth)" :key="p.id" :value="p.id">
                 {{ '— '.repeat(p.depth) }}{{ primaryOf(p.node, p.depth) }}
               </option>
             </select>
@@ -2087,14 +2087,31 @@ const _app = createApp({
       this.newComment = ''; this.newFieldKey = ''; this.newTag = '';
     },
     // Everything except the node itself and its own descendants.
-    parentChoices(excludeId){
+    // Return candidate parents for a node that should stay at nodeDepth.
+    // Cross-depth reparent is deliberately blocked: field keys are per-level
+    // (a Layer uses `title`/`blurb`; an Item uses `name`/`desc`/`status`), so
+    // dragging a layer under another layer left primaryOf reading `name`,
+    // finding nothing, and rendering the moved node as "Untitled". Data
+    // survived on the object under the old keys, but it looked deleted. See
+    // issue #10. The Parent dropdown template also gates the "— top level —"
+    // option on nodeDepth === 0 for the same reason.
+    //
+    // For nodeDepth === 0, no non-top-level options exist. For nodeDepth > 0,
+    // return every node at depth nodeDepth - 1, minus the moving node itself
+    // and its descendants (a node can't become its own ancestor).
+    parentChoices(excludeId, nodeDepth){
+      if (nodeDepth === 0) return [];
       const out = [];
       const banned = new Set();
       if (excludeId != null){
         const hit = locate(this.nodes, excludeId);
         if (hit) walk([hit.node], n => banned.add(n.id));
       }
-      walk(this.nodes, (n, depth) => { if (!banned.has(n.id)) out.push({ id:n.id, node:n, depth }); });
+      const wanted = nodeDepth - 1;
+      walk(this.nodes, (n, depth) => {
+        if (depth === wanted && !banned.has(n.id))
+          out.push({ id:n.id, node:n, depth });
+      });
       return out;
     },
     saveNode(){
