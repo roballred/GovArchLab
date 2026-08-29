@@ -55,11 +55,19 @@ its display label from the schema. In your own drawing they might be:
 - **Business Function**
 - Anything else you'd call the things inside a layer
 
-Rename them via the **Rename levels…** button in the toolbar (Edit mode).
-That modal also lets you add fields, change the layout, and add extra
-depths — e.g., a third depth for "Sub-capability", "Sub-service", or
-"Feature". Levels beyond the deepest declared one reuse the last level's
-schema, so nested nodes render fine even without a new schema entry.
+There is no in-app **Rename levels…** button. For the common case — calling
+one layer's children Services, adding a depth, changing layout — use the
+**Subtree layout & depth** section of that top-level item's detail modal
+(Edit mode). To change the drawing-wide defaults (rename Layer/Capability
+for every node, add a field such as `status` on layers, add a third depth
+for the whole file), edit the `<script type="application/json" id="schema">`
+block in a text editor, Save, and reload.
+
+Removing a field from the schema does **not** strip that field's values
+from existing nodes — they just stop rendering. Safe to shrink. Adding
+a field shows it on new and existing nodes at that depth once you reload.
+Levels beyond the deepest declared one reuse the last level's schema, so
+nested nodes render fine even without a new schema entry.
 
 Throughout this guide, **"layer"** means whatever your depth-0 nodes are
 called, and **"capability"** (or the generic **"item"**) means the
@@ -203,7 +211,8 @@ modal or Cancel. Cancel discards field edits, not comments.
 ### Status field
 
 Each item carries a status (this schema declares it on the depth-1 level;
-you can add the same field to other levels via Rename levels…):
+you can add the same field to other levels by editing the schema JSON — see
+Terminology above):
 
 | Status | Meaning |
 |---|---|
@@ -441,7 +450,11 @@ straight to disk.
 **"The picker keeps opening even though I've saved before."**
 That's a fresh tab starting a fresh session. The handle stored in
 IndexedDB is keyed by the file's `docId` in its meta block — if it can't
-find one, or the file's docId changed, you get the picker.
+find one (the tracked blank ships with an empty docId until first Save),
+or the file's docId changed, you get the picker. Copies saved from an
+older template that still shared one hardcoded docId can reconnect to
+the wrong file — start from a fresh blank, or clear `meta.docId` in the
+seed-data block so the next Save mints a new id.
 
 **"I made changes I want to throw away."**
 Reload the tab without saving. Nothing you didn't save is persisted.

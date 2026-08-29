@@ -898,7 +898,7 @@
           <div class="fld">
             <label for="f-parent">Parent</label>
             <select id="f-parent" v-model="modal.parentId"
-                    title="Move this node under a different parent — or to the top level. Descendants come along.">
+                    title="Move this node under a different parent at the same depth. Descendants come along.">
               <option :value="null" v-if="modal.depth === 0">— top level —</option>
               <option v-for="p in parentChoices(modal.data.id, modal.depth)" :key="p.id" :value="p.id">
                 {{ '— '.repeat(p.depth) }}{{ primaryOf(p.node, p.depth) }}
@@ -1059,7 +1059,7 @@
         </div>
 
         <div class="modactions">
-          <button class="btn danger" v-if="!modal.isNew && !modal.readonly" @click="removeNode(modal.data.id); closeModal()"
+          <button class="btn danger" v-if="!modal.isNew && !modal.readonly" @click="removeNode(modal.data.id)"
                   title="Remove this node and everything nested inside it. There is no undo.">Delete</button>
           <button class="btn" @click="closeModal" :title="modal.readonly ? 'Close this detail view' : 'Discard your pending field edits (comments already added are kept)'">{{ modal.readonly ? 'Close' : 'Cancel' }}</button>
           <button class="btn primary" v-if="!modal.readonly" @click="saveNode"
@@ -1223,6 +1223,41 @@ function normComments(list){
   return (list || []).map(c => (typeof c === 'string') ? { text:c, by:'', at:'' } : c);
 }
 
+// Legacy `blocks` array — prose notes that used to live above/below the
+// diagram, with a dedicated BlockList component. That UI was replaced by
+// the single boardNotes textarea; the array stopped rendering but kept
+// round-tripping through save. An old file imported into the new engine
+// would then have text stuck in `blocks` with nowhere to show it.
+//
+// Migrates blocks into boardNotes and empties the array. Idempotent: if
+// blocks is empty, no-op. Called at initial load (before data() reads
+// SEED) and inside _applyImportedFile. Legacy shapes covered:
+//   - {id, placement: 'above'|'below', text, heading?} — last BlockList shape
+//   - bare strings (very old drafts)
+//   - anything with a `text` or `body` field
+function migrateBlocksIntoNotes(seed){
+  if (!seed || !Array.isArray(seed.blocks) || !seed.blocks.length) return false;
+  const rank = { above: 0, below: 2 };
+  const sorted = seed.blocks.slice().sort((a, b) =>
+    (rank[a && a.placement] != null ? rank[a && a.placement] : 1) -
+    (rank[b && b.placement] != null ? rank[b && b.placement] : 1)
+  );
+  const chunks = sorted.map(b => {
+    if (b == null) return '';
+    if (typeof b === 'string') return b;
+    const heading = b.heading || b.title || '';
+    const text    = b.text    || b.body  || '';
+    const both    = [heading, text].filter(s => s && String(s).trim()).join('\n');
+    return both.trim();
+  }).filter(Boolean);
+  seed.blocks = [];
+  if (!chunks.length) return false;
+  const migrated = chunks.join('\n\n---\n\n');
+  const existing = (seed.boardNotes || '').trim();
+  seed.boardNotes = existing ? existing + '\n\n---\n\n' + migrated : migrated;
+  return true;
+}
+
 const PALETTE = [
   { accent:'#4db38a', bg:'#16281f' }, { accent:'#5b8dd6', bg:'#182234' },
   { accent:'#9b6dd6', bg:'#20182e' }, { accent:'#e0b24d', bg:'#2a2413' },
@@ -1290,6 +1325,9 @@ function locate(nodes, id){
 
 const SCHEMA = readBlock('schema', { strict:false, levels:[] });
 const SEED   = readBlock('seed-data', { title:'', subtitle:'', boardNotes:'', nodes:[] });
+// Fold leftover BlockList prose into boardNotes before Vue reads SEED, so
+// data() sees the merged notes and an empty blocks array.
+migrateBlocksIntoNotes(SEED);
 
 // ---------------------------------------------------------------------------
 // One recursive component renders every depth. Container and item are the same
@@ -1298,10 +1336,10 @@ const SEED   = readBlock('seed-data', { title:'', subtitle:'', boardNotes:'', no
 // The old BlockList component (prose notes above/below the diagram) was
 // removed: the single boardNotes textarea at the bottom of the page covers
 // everything it did, without the toolbar clutter of Note above / Note
-// below buttons or a per-block editor. `blocks` still round-trips through
-// the seed data for files that were saved with the old shape, but nothing
-// renders those entries — the seed just carries `blocks: []` and always
-// will going forward.
+// below buttons or a per-block editor. Old files whose `blocks` array still
+// carried text are migrated into boardNotes at load and import (see
+// migrateBlocksIntoNotes above). New saves still write `blocks: []` for
+// one engine version of write-compatibility.
 
 // Neutral card outline, solved to 3:1 against the page. Kept in JS as well as
 // CSS because a nested node sits on its parent's tint, not the page, and the
@@ -2157,8 +2195,22 @@ const _app = createApp({
       const hit = locate(this.nodes, id);
       if (!hit) return;
       const kids = (hit.node.children || []).length;
-      if (kids && !confirm('This ' + this.levelLabel(hit.depth).toLowerCase() + ' has ' + kids + ' child item(s). Remove it and everything under it?')) return;
+      // Confirm EVERY delete, not just parents — a childless item or empty
+      // layer used to vanish on one × with no chance to cancel. There is
+      // no undo (rev history stores stamps, not snapshots).
+      const name = this.primaryOf(hit.node, hit.depth) || this.levelLabel(hit.depth);
+      const kindsLabel = this.levelLabel(hit.depth).toLowerCase();
+      const kidsLine = kids
+        ? '\n\nIt has ' + kids + ' child item(s), which will also be removed.'
+        : '';
+      if (!confirm('Remove this ' + kindsLabel + ' — "' + name + '"?' + kidsLine +
+                   '\n\nThis cannot be undone.'))
+        return;
       hit.list.splice(hit.index, 1);
+      // Close the modal only after a successful delete of the open node.
+      // The Delete button used to call closeModal() unconditionally after
+      // this method, so cancelling the confirm still discarded in-progress
+      // field edits. Tile × does not need a separate close.
       if (this.modal && this.modal.data && this.modal.data.id === id) this.closeModal();
     },
     move(id, dir){
@@ -2512,6 +2564,11 @@ const _app = createApp({
       try { seed = JSON.parse(seedMatch[1].trim()); }
       catch (e) { throw new Error('seed-data JSON is invalid: ' + e.message); }
 
+      // Same block-migration as at load: text stuck in the legacy `blocks`
+      // array of an imported file gets folded into boardNotes before we
+      // assign either.
+      migrateBlocksIntoNotes(seed);
+
       // Apply the imported drawing. This file's identity is preserved —
       // docId, revision counter, updatedBy/updatedAt, schemaVersion, and
       // history all stay with THIS file. A save after import stamps as
@@ -2532,7 +2589,14 @@ const _app = createApp({
       this.titleBlockHelp = seed.titleBlockHelp
         ? JSON.parse(JSON.stringify(seed.titleBlockHelp)) : null;
       this.blocks      = Array.isArray(seed.blocks) ? seed.blocks : [];
-      this.nodes       = Array.isArray(seed.nodes)  ? seed.nodes  : [];
+      // Deep-copy before mutating — `seed` is a JSON.parse of the imported
+      // file; anything else that inspects it should see the original shape.
+      this.nodes       = Array.isArray(seed.nodes)
+                           ? JSON.parse(JSON.stringify(seed.nodes))
+                           : [];
+      // Upgrade legacy bare-string comments to {text, by, at}, the same
+      // walk applied at initial load. normComments is idempotent.
+      walk(this.nodes, n => { n.comments = normComments(n.comments); });
       this.meta.engineVersion = ENGINE_VERSION;
       const importedRev = typeof importedMeta.rev === 'number' ? importedMeta.rev : null;
       this.meta.history = [{
