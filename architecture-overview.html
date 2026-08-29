@@ -779,9 +779,9 @@
           <!-- 3b. Edit mode, expanded: full labelled form. -->
           <dl class="tb-detail" v-show="mode === 'edit' && tbOpen">
             <div class="tb-row" v-for="(v,k) in titleBlock" :key="k">
-              <dt><label :for="'tb-'+k">{{ k }}</label></dt>
+              <dt><label :for="tbIds[k]">{{ k }}</label></dt>
               <dd>
-                <input class="tb-in" :id="'tb-'+k" :value="v"
+                <input class="tb-in" :id="tbIds[k]" :value="v"
                        :title="'The ' + k.toLowerCase() + ' for this drawing'"
                        :placeholder="'Enter ' + k.toLowerCase()"
                        @focus="onTitleBlockFocus(k)"
@@ -1739,6 +1739,29 @@ createApp({
   computed:{
     canPickFile(){ return typeof window.showSaveFilePicker === 'function'; },
     engineVersion(){ return ENGINE_VERSION; },
+    // Stable DOM ids for the title-block inputs, keyed by their visible
+    // label. The label itself can contain spaces / slashes / anything a
+    // schema author dropped in ("Project / Solution"), which HTML allows
+    // but makes the id useless for tests, fragment URLs, or CSS selectors
+    // (`#tb-Project / Solution` is invalid). Slug to a-z0-9-only; on the
+    // rare chance two keys collapse to the same slug, disambiguate with a
+    // numeric suffix so <label :for> still resolves to exactly one input.
+    tbIds(){
+      const map = {};
+      const seen = new Set();
+      const keys = Object.keys(this.titleBlock || {});
+      for (const k of keys){
+        let slug = 'tb-' + String(k).toLowerCase()
+                              .replace(/[^a-z0-9]+/g, '-')
+                              .replace(/^-+|-+$/g, '');
+        if (slug === 'tb-') slug = 'tb-x';   // key with no alphanumerics at all
+        let cand = slug, n = 1;
+        while (seen.has(cand)) { n += 1; cand = slug + '-' + n; }
+        seen.add(cand);
+        map[k] = cand;
+      }
+      return map;
+    },
     // The opaque colour top-level nodes are drawn against — matches the
     // body's --bg so contrast math up the tree lands on a real surface.
     pageBg(){ return '#f4f7fb'; },
