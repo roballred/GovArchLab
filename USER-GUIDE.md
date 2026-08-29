@@ -71,10 +71,15 @@ The **View / Edit** toggle at the top switches the whole page between:
 
 - **View** — read-only. What a reviewer or stakeholder should see. All
   input fields hide, description text is static, and only the collapse
-  carets remain interactive.
+  carets remain interactive. Expanding or collapsing a band in View is
+  session-only — it does not mark the document dirty, does not trigger a
+  "leave the page?" prompt, and does not persist into the file. Reload
+  in View and the file's saved collapsed states come back.
 - **Edit** — every field on the page becomes editable in place, action
   icons appear on every node, and the toolbar shows Add, Save, and other
-  controls.
+  controls. Expanding or collapsing in Edit writes to the file — the
+  layers you leave open are the layers everyone sees when the file is
+  next opened.
 
 Switching modes doesn't change or discard anything.
 
