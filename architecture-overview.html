@@ -164,7 +164,14 @@
     min-width:3ch;
   }
   .type-in:hover{ background:rgba(0,0,0,.04) }
-  .type-in:focus{ background:rgba(255,255,255,.10); outline:none; border-bottom-color:var(--focus) }
+  /* Focus: paint the same subtle wash + bottom-border colour used by other
+     inline inputs, but LET the global :focus-visible outline through. The
+     old rule had `outline: none`, which stripped keyboard-users' focus
+     ring — WCAG 2.4.7 fail on a control that sits on coloured layer spines
+     where a bottom-border colour shift alone is easy to miss. Mouse focus
+     (:focus but not :focus-visible) still won't paint the ring, matching
+     the app's existing pattern for other inputs. */
+  .type-in:focus{ background:rgba(255,255,255,.10); border-bottom-color:var(--focus) }
   .badge{font-size:9px;letter-spacing:.5px;text-transform:uppercase;font-weight:700;padding:2px 8px;border-radius:10px}
   .chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 11px}
   .chip{font-size:10.5px;padding:3px 9px;border-radius:11px;background:var(--chip-bg);color:var(--text-2)}
