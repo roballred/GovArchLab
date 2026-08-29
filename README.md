@@ -47,7 +47,7 @@ SharePoint workflow.
 Deliberately minimal — this is one HTML file plus its documentation:
 
 ```
-architecture-overview.html   the product (Vue inlined, sample data included)
+architecture-overview.html   the product (Vue inlined, tracked file ships empty)
 USER-GUIDE.md                how to use it
 README.md                    this file
 LICENSE                      MIT

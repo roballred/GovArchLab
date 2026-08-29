@@ -62,8 +62,8 @@ depths — e.g., a third depth for "Sub-capability", "Sub-service", or
 schema, so nested nodes render fine even without a new schema entry.
 
 Throughout this guide, **"layer"** means whatever your depth-0 nodes are
-called, and **"item"** or occasionally **"capability"** means the depth-1
-nodes. When a specific instance name matters, it's noted.
+called, and **"capability"** (or the generic **"item"**) means the
+depth-1 nodes. When a specific instance name matters, it's noted.
 
 ## Two modes: View and Edit
 
@@ -130,7 +130,7 @@ show where the drop will land. Or focus the grip and press:
 - **Home** — move to the first position
 - **End** — move to the last position
 
-Reordering only works among siblings — dragging a Zone onto a
+Reordering only works among siblings — dragging one item onto a
 different Layer won't move it there. Use the **Parent** dropdown in
 the detail modal for cross-parent moves. Screen readers hear the new
 position announced after each move.
@@ -160,8 +160,7 @@ The modal shows:
 - Every schema field for that node
 - A **Parent** dropdown to move the node under a different parent
 - A **Layer colour** swatch row (top-level layers only) — pick from the
-  fixed palette to override the auto-assigned band colour. Click the
-  same swatch as-is to reset to the auto pick.
+  fixed palette to override the auto-assigned band colour.
 - A **Highlight** swatch row (items inside a layer) — pick a tint colour
   to make this item visually stand out from its siblings. The tile paints
   with a pale-tinted background and a matching border. The leftmost
@@ -219,8 +218,8 @@ the Parent dropdown when you're editing a top-level item.
 Editable per item (only visible when the item is at depth 0):
 
 - **This item is a…** and **Plural** — the item's own type name (e.g.
-  Layer, Domain, Zone Model). Leave blank to use the global default.
-  One top-level can be a "Zone Model" while another is a "Layer".
+  Layer, Domain, Value Stream). Leave blank to use the global default.
+  One top-level can be a "Domain" while another is a "Layer".
 - **+ Add depth override** — extends this item's subtree with a
   per-depth override. Each override row lets you set:
   - **Name** and **Plural** — what nodes at that depth are called INSIDE
@@ -249,15 +248,18 @@ If you need entirely different fields per subtree (e.g., one layer with
 
 ### Per-parent name overrides
 
-Inside any container, the little **"N items"** count next to its name is
-editable in Edit mode. Click "items" (or "item", if there's exactly one)
-and type over it — that container's kids get relabelled without opening
-the gear modal. One Layer can call its children **Services**, another
-**Components**, a third can leave them as the default. The overrides
-save with the file as `node.childType` / `node.childTypePlural`.
+Inside any container, the little **"N capabilities"** count next to its
+name is editable in Edit mode. Click the child-type word (or its
+singular form when there's exactly one child) and type over it —
+that container's kids get relabelled. One Layer can call its children
+**Services**, another **Components**, a third can leave them as the
+default. The overrides save with the file as `node.childType` /
+`node.childTypePlural`.
 
-Use the ncount inline rename when only the LABEL differs; use the ⚙
-gear when the subtree needs a different layout, frame, detail, or depth.
+Use the ncount inline rename when only the LABEL differs; use the
+**Subtree layout & depth** section of the detail modal (visible when
+you're editing a top-level item) when the subtree needs a different
+layout, frame, detail, or depth.
 
 ## Saving
 
