@@ -296,9 +296,7 @@
     :root{
       --bg:#fff; --surface:#fff; --surface-2:#f4f7fb; --input-bg:#fff;
       /* Print keeps the on-screen tokens; only pushes muted/faint darker
-         for ink legibility and drops the shadow. NOTE: this stylesheet
-         hasn't been actually verified against a printer yet — treat any
-         print output as draft until it is. */
+         for ink legibility and drops the shadow. */
       --muted:#4a5870; --faint:#4a5870; --shadow:none;
     }
     body{background:#fff;color:#17243a;padding:0}
@@ -307,6 +305,11 @@
     .node.labeled{border:1px solid #b8c7d9}
     h1{color:#17243a}
     a[href]:after{content:""}
+    /* An open detail modal is an editing surface, not part of the
+       drawing — never let it ride into a printout. dialog::backdrop is
+       covered separately since it isn't a normal box the display rule
+       reaches. */
+    dialog.modal, dialog.modal::backdrop{ display:none !important }
   }
 /* SHEET-CSS */
 
@@ -1380,6 +1383,12 @@ const NodeView = {
     // reviewer's first look matches whatever the author saved.
     collapsed(){
       if (this.kids.length === 0) return false;
+      // Printing forces every band open regardless of screen state or
+      // saved node.collapsed — see mounted()'s beforeprint/afterprint
+      // handlers. This check comes before the view/edit branches so it
+      // wins over BOTH: a reviewer's session-only view collapse and the
+      // file's own saved collapse state.
+      if (this.app.printing) return false;
       if (this.app.mode !== 'edit'){
         const override = this.app.uiCollapsed[this.node.id];
         if (override !== undefined) return !!override;
@@ -1771,6 +1780,11 @@ const _app = createApp({
       // labelled form. Starts collapsed on every load so entering edit
       // mode doesn't immediately push the diagram down.
       tbOpen:false,
+      // True between the browser's beforeprint and afterprint events.
+      // NodeView.collapsed checks this to force every band open for the
+      // duration of printing, without touching node.collapsed (see
+      // mounted() below and NodeView.collapsed).
+      printing:false,
       dirty:false, boundName:null, savedFlash:'',
       // Exposed to modal templates so the swatch rows can iterate them.
       // Neither is reactive state — just static reference lookups.
@@ -1904,6 +1918,15 @@ const _app = createApp({
     // first edit.
     document.title = this.title || 'Architecture Overview';
     window.addEventListener('beforeunload', e => { if(this.dirty){ e.preventDefault(); e.returnValue=''; } });
+    // Print should show what's IN the drawing, not the reader's last
+    // collapse state — the default load is all-collapsed, so an
+    // unmodified print would otherwise be a page of spines with no
+    // tiles. `printing` flips NodeView.collapsed to always report
+    // expanded (see that computed) without touching node.collapsed —
+    // nothing is written to the document and nothing dirties. afterprint
+    // always fires, including after Cancel, so this cannot get stuck on.
+    window.addEventListener('beforeprint', () => { this.printing = true; });
+    window.addEventListener('afterprint', () => { this.printing = false; });
     // Reconnect to a previously-saved file handle for this document, if we
     // stored one in IndexedDB on an earlier save. We only fetch the handle
     // here — the permission grant is deferred to the first Save click, since
