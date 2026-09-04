@@ -11,3 +11,6 @@
 .claude/
 .vscode/
 .idea/
+
+# Verification harness devDependency (npm install) — not shipped to users
+node_modules/

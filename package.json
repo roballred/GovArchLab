@@ -1,0 +1,14 @@
+{
+  "name": "govarchlab",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Minimum-viable verification harness for architecture-overview.html. Not a runtime dependency — the artifact itself has none.",
+  "type": "module",
+  "scripts": {
+    "verify": "node scripts/verify.mjs",
+    "test": "node scripts/verify.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.1"
+  }
+}

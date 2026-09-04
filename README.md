@@ -99,12 +99,30 @@ clear sections):
 
 **Quick sanity check** after any edit — before committing:
 
+```bash
+npm install   # first time only — installs jsdom as a devDependency
+npm test
+```
+
+This runs `scripts/verify.mjs`, a small jsdom-based check (no test
+framework, no build step) that: the `#schema` and `#seed-data` JSON
+blocks parse, Vue actually mounts and renders (no raw `{{ mustaches }}`
+left on the page), and the save-file serializer's regex replace still
+finds its targets and round-trips a fixture that contains `</script>`
+in a field. It's the mechanical version of the manual reload check,
+and it's what CI runs on every push and PR (`.github/workflows/verify.yml`).
+
+`npm test` doesn't replace opening the file in a browser — it catches
+"the artifact is structurally broken" bugs, not visual or interaction
+regressions. Still reload and click through the app after any change:
+
 1. Reload the file in Chrome, Edge, Safari, or Firefox.
-2. Confirm you don't see raw `{{ mustaches }}` on the page (Vue would
-   have replaced them). If you do, the template didn't compile — check
-   the browser console for the parse error.
-3. Confirm interactive controls still work (toggle View/Edit, expand a
+2. Confirm interactive controls still work (toggle View/Edit, expand a
    layer, open a detail modal).
+
+`architecture-overview.html` itself has zero runtime dependencies —
+`npm install` is only for the verification harness, never shipped to
+users. The devDependency (`jsdom`) is not vendored into the artifact.
 
 ## Upgrading Vue
 
