@@ -417,11 +417,31 @@ Chrome or Edge for anything with many save cycles.
 ## Print
 
 - File → Print (or Ctrl/Cmd+P) — the print stylesheet automatically
-  strips toolbars, hint banners, action icons, and tooltips.
+  strips toolbars, hint banners, action icons, tooltips, and the
+  detail modal (an open record never rides into a printout).
+- **Print always expands every layer band**, regardless of what's
+  collapsed on screen — a printout is meant to show what's IN the
+  drawing, and the default load is all-collapsed. This happens for the
+  duration of printing only: it doesn't change what's saved to the
+  file, doesn't mark the document dirty, and restores exactly what was
+  on screen (including a reviewer's own session-only expand/collapse
+  clicks in View) once the print dialog closes or is cancelled.
+- The title-block metadata always prints as the labelled form, never
+  the compact chip row, regardless of which mode or collapse state you
+  printed from.
 - Landscape orientation is set on `@page`; the sheet fits within the
   drawing box.
-- **Not yet verified end-to-end against a real printer.** If you find
-  something broken (missing backgrounds, cut-off content), report it.
+- **Verified**: the expand-on-print behaviour and modal-hiding were
+  exercised end-to-end in an automated Chromium session — collapsed
+  bands expand for print, the saved/session collapse state is restored
+  afterward exactly, and the flag never dirties the document. **Not
+  yet verified**: physical output from a real printer, or Safari /
+  Firefox's print preview specifically (the CSS uses only standard
+  `@media print` and `@page` — no browser-specific print APIs — so it
+  should behave the same, but that hasn't been confirmed on those
+  engines). If you find something broken on a real device (missing
+  backgrounds, cut-off content, a browser that doesn't run the
+  beforeprint/afterprint expand), report it.
 
 ## Keyboard and accessibility
 
