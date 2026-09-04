@@ -423,6 +423,39 @@ Chrome or Edge for anything with many save cycles.
 - **Not yet verified end-to-end against a real printer.** If you find
   something broken (missing backgrounds, cut-off content), report it.
 
+## Large layers
+
+The grid layout (`repeat(auto-fit, minmax(260px, 1fr))`) has no hard
+cap on how many items a layer can hold — the browser fits as many
+260px+ tiles as the container width allows and wraps the rest to
+additional rows, rather than squeezing every item into a fixed number
+of columns.
+
+**Verified** against a 20-item layer (mixed statuses, tags, highlights,
+long descriptions, one comment) and a 15-item layer with two depth-2
+nested subtrees, in both View and Edit, in an automated Chromium
+session:
+
+- No clipped text, no tile squeezed below readable width.
+- Long descriptions clamp with an ellipsis in View (the tile summary
+  clamp), and are fully visible in Edit (the [autosize
+  textarea](#editing-inline) added for issue #12).
+- A long tile name wraps to multiple lines; the tile grows to fit —
+  it doesn't overflow or get cut off.
+- Highlight tints and dashed "outside the boundary" frames render
+  correctly at scale, don't degrade with many siblings.
+- A depth-2 nested subtree inside a 15-item grid renders inline
+  inside its parent's tile — the row auto-sizes to the tallest tile,
+  without spilling into or overlapping neighbouring cells.
+- An empty layer alongside large ones still shows the "No `<items>`
+  yet" empty-state chrome (issue #6), not a mismatched card.
+- No console errors in either fixture.
+
+**Not yet verified**: physical print output at this scale (see
+[Print](#print) — the print stylesheet itself was verified, but not
+specifically against a 20+ item layer spanning multiple printed
+pages) or a real-world layer with 50+ items.
+
 ## Keyboard and accessibility
 
 - Full keyboard navigation via Tab / Shift-Tab.
