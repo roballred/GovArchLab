@@ -144,7 +144,10 @@ Edit mode shows an action strip on every node:
 of each layer band and each item tile in Edit mode — click and drag
 anywhere along the strip to move the item, or focus it with Tab for
 keyboard reorder. A coloured bar appears above or below a sibling to
-show where the drop will land. Or focus the grip and press:
+show where the drop will land — on a layer band, a matching bar also
+runs down the band's left edge, so the full-width row reads clearly
+as the thing that's about to move (a thin top/bottom line alone is
+easy to miss across a wide sheet). Or focus the grip and press:
 - **↑ / ←** — move up one position
 - **↓ / →** — move down one position
 - **Home** — move to the first position
