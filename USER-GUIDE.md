@@ -426,8 +426,12 @@ Chrome or Edge for anything with many save cycles.
 ## Print
 
 - File → Print (or Ctrl/Cmd+P) — the print stylesheet automatically
-  strips toolbars, hint banners, action icons, tooltips, and the
-  detail modal (an open record never rides into a printout).
+  strips toolbars, hint banners, action icons, tooltips, the detail
+  modal (an open record never rides into a printout), and every piece
+  of Edit-only interactive chrome — collapse carets and the drag grip
+  strips included. Since print always expands every band, a caret
+  would be showing on a band with nothing left to expand; the grip
+  strip has no meaning once nothing on the page is draggable.
 - **Print always expands every layer band**, regardless of what's
   collapsed on screen — a printout is meant to show what's IN the
   drawing, and the default load is all-collapsed. This happens for the

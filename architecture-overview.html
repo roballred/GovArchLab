@@ -296,7 +296,14 @@
       --muted:#4a5870; --faint:#4a5870; --shadow:none;
     }
     body{background:#fff;color:#17243a;padding:0}
-    .modebar,.toolbar,.nctrls,.skip,.foot-note{display:none !important}
+    /* .discloser / .grip-strip: leftover Edit chrome. Print always forces
+       every band expanded (see the `printing` flag in mounted()), so a
+       caret would be a lie — nothing to expand — and the grip is a
+       drag handle with no meaning on paper. .whoami/.dirty/.saved are
+       already inside .toolbar (covered by that selector) but hidden
+       defensively here in case a future layout moves them out of it. */
+    .modebar,.toolbar,.nctrls,.skip,.foot-note,
+    .discloser,.grip-strip,.whoami,.dirty,.saved{display:none !important}
     .node,.notespanel{break-inside:avoid;page-break-inside:avoid}
     .node.labeled{border:1px solid #b8c7d9}
     h1{color:#17243a}
