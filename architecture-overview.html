@@ -127,6 +127,19 @@
      `box-shadow` (rather than a real border) doesn't shift adjacent tiles. */
   .node.drop-before{box-shadow:0 -3px 0 0 var(--accent) inset, 0 -3px 0 0 var(--accent)}
   .node.drop-after{box-shadow:0 3px 0 0 var(--accent) inset, 0 3px 0 0 var(--accent)}
+  /* Labeled layer bands are a different geometry from a grid of tiles: a
+     full-width row, not a small card, and in sheet presentation they sit
+     flush against each other (.sheet .depth0+.depth0 border-top) — that
+     2px seam sits exactly where the generic top/bottom bar above would
+     land, swallowing it. Add a left spine bar so the indicator survives
+     that seam and reads in the band's own visual language: the labelcell
+     IS a left-edge colour spine already, so a thicker accent bar there
+     answers "this whole band moves" more clearly than a 3px line across
+     up to 1600px of tinted body. Keep the top/bottom cue too — it still
+     answers before-vs-after even when the left bar alone might be missed
+     on a very tall expanded band. */
+  .node.labeled.drop-before{box-shadow:inset 4px 0 0 var(--accent), 0 -3px 0 0 var(--accent)}
+  .node.labeled.drop-after{box-shadow:inset 4px 0 0 var(--accent), 0 3px 0 0 var(--accent)}
   .node.dragging{opacity:.4}
   .nsub{font-size:12.5px;color:var(--text-2);line-height:1.5;margin:0;padding:0 14px 11px}
   /* Inline-edit inputs: look like the text they replace, not like form
