@@ -75,9 +75,6 @@
   .whoami{background:none;border:none;font-size:11px;color:var(--muted);cursor:pointer;border-bottom:1px dotted var(--btn-border);font-family:inherit;padding:2px 0}
   .whoami:hover{color:var(--text)}
 
-  /* .hint banner + Show tips button removed — tip content went stale
-     faster than it was worth maintaining. */
-
   /* ---- node chrome ---------------------------------------------------- */
   .node{border-radius:10px;margin-bottom:10px;overflow:hidden}
   .node.depth0{margin-bottom:16px}
@@ -221,8 +218,7 @@
   .node.labeled>.labelcell .nname{font-size:17px}
   .node.labeled>.bodycell{background:var(--surface)}
 
-  /* ---- prose blocks, number badges, badge summary --------------------- */
-  /* .blockbox / .blockedit removed with the +Note above/below feature. */
+  /* ---- number badges, badge summary ------------------------------------ */
   .numbadge{width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex:0 0 auto}
   .summary{display:flex;gap:18px;justify-content:center;font-size:11.5px;color:var(--muted);margin-bottom:14px;flex-wrap:wrap}
   .summary .sdot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:6px}
@@ -688,7 +684,7 @@
 <div id="app">
   <a class="skip" href="#content">Skip to content</a>
   <!-- Screen-reader announcements for keyboard-driven reorder and drop.
-       Empty most of the time; every move() / moveTo() call refills it, and
+       Empty most of the time; every moveTo() call refills it, and
        aria-live=polite reads the new text out. -->
   <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">{{ reorderMsg }}</div>
   <div class="wrap" :class="{'sheet-view': isSheet && mode==='view'}">
@@ -716,20 +712,32 @@
       </div>
     </div>
 
-    <div class="toolbar" v-if="mode==='edit'">
-      <button class="btn primary" @click="openAdd(null, 0)" title="Add item">+ Add</button>
-      <button class="btn primary" @click="saveFile(false)" aria-keyshortcuts="Control+S Meta+S" :title="boundName ? ('Save changes to ' + boundName + '. The browser may ask once per tab-open to reconfirm access; after that, saves are silent and in-place.') : 'First save: pick this file in the dialog to bind it. Subsequent saves in this tab (and future opens of the same file) will write straight to disk in Chrome/Edge. Other browsers download a copy instead.'">{{ boundName ? 'Save → ' + boundName : 'Save updated file' }}</button>
-      <button class="btn" v-if="canPickFile" @click="saveFile(true)" title="Pick a different file to write to instead of overwriting the current one">Save as…</button>
-      <button class="btn" @click="importFromFile"
+    <!-- Save must stay reachable whenever there ARE unsaved changes, even in
+         View — View is documented as read-only preview, but people flip to
+         it to preview before saving, and the old v-if="mode==='edit'" made
+         the dirty pill AND the only Save control both vanish the moment you
+         did. beforeunload still warns on tab close, but that doesn't help
+         someone who previews, likes it, and closes the file thinking View
+         meant saved. Add / Save as… / Import / You: stay Edit-only — View
+         still can't create, migrate, or attribute; it can only persist
+         what's already pending. See issue #42. -->
+    <div class="toolbar" v-if="mode==='edit' || dirty || savedFlash">
+      <button class="btn primary" v-if="mode==='edit'" @click="openAdd(null, 0)" title="Add item">+ Add</button>
+      <button class="btn primary" v-if="mode==='edit' || dirty" @click="saveFile(false)"
+              :title="boundName ? ('Save changes to ' + boundName + '. The browser may ask once per tab-open to reconfirm access; after that, saves are silent and in-place.') : 'First save: pick this file in the dialog to bind it. Subsequent saves in this tab (and future opens of the same file) will write straight to disk in Chrome/Edge. Other browsers download a copy instead.'">{{ boundName ? 'Save → ' + boundName : 'Save updated file' }}</button>
+      <button class="btn" v-if="mode==='edit' && canPickFile" @click="saveFile(true)" title="Pick a different file to write to instead of overwriting the current one">Save as…</button>
+      <button class="btn" v-if="mode==='edit'" @click="importFromFile"
               title="Load the drawing (layers, items, comments, title block, notes) from another architecture-overview.html file into this one. Use this to migrate content from an older engine version to a newer one. Schema and file location stay as-is.">Import…</button>
       <!-- Fallback file picker for Firefox / Safari (no showOpenFilePicker).
-           Hidden off-screen; importFromFile() clicks it programmatically. -->
-      <input type="file" ref="importInput" accept=".html,.htm,text/html"
+           Hidden off-screen; importFromFile() clicks it programmatically.
+           Import is Edit-only (button above is gated the same way), so this
+           only needs to exist while the toolbar is showing its Edit set. -->
+      <input v-if="mode==='edit'" type="file" ref="importInput" accept=".html,.htm,text/html"
              style="position:absolute;left:-9999px;top:0;width:1px;height:1px;overflow:hidden"
              aria-hidden="true" tabindex="-1">
       <span class="dirty" v-if="dirty"><span class="d"></span>unsaved changes</span>
       <span class="saved" v-if="savedFlash">&#10003; {{ savedFlash }}</span>
-      <button type="button" class="whoami" @click="askAuthor(true)" title="Change the name your edits and comments are attributed to (stored in your browser only, not in the file)">{{ author ? 'You: ' + author : 'Set your name' }}<span class="sr-only"> — used to attribute your edits and comments</span></button>
+      <button type="button" class="whoami" v-if="mode==='edit'" @click="askAuthor(true)" title="Change the name your edits and comments are attributed to (stored in your browser only, not in the file)">{{ author ? 'You: ' + author : 'Set your name' }}<span class="sr-only"> — used to attribute your edits and comments</span></button>
     </div>
 
     <main id="content" :class="{sheet: isSheet}">
@@ -1864,19 +1872,37 @@ const _app = createApp({
     // The key is derived, never authored: every badge option actually in use,
     // plus any convention the data relies on.
     legend(){
+      // One walk instead of one walk PER OPTION PER BADGE FIELD. Collect
+      // every badge field across all levels first (schema-only, no walk
+      // needed), then a single pass over the tree records which VALUES
+      // were actually seen for each field — checking set membership
+      // against a field's options afterward is O(options), not another
+      // walk. Previously: nodes × badgeFields × options walks. Now:
+      // one walk (nodes × badgeFields) + one cheap pass (badgeFields ×
+      // options). Matters once a drawing has real size (issue #18's
+      // 20-item / depth-2 fixture is what surfaced this).
+      const badgeFields = [];
+      this.levels.forEach(l => {
+        (l.fields || []).filter(f => f.type === 'badge' && f.options).forEach(f => badgeFields.push(f));
+      });
+      const usedValues = badgeFields.map(() => new Set());
+      let dashed = false;
+      walk(this.nodes, n => {
+        badgeFields.forEach((f, i) => {
+          const v = n[f.key];
+          if (v != null && v !== '') usedValues[i].add(v);
+        });
+        if (n.dashed) dashed = true;
+      });
       const out = [];
-      this.levels.forEach((l, d) => {
-        (l.fields || []).filter(f => f.type === 'badge' && f.options).forEach(f => {
-          f.options.forEach(o => {
-            let used = false;
-            walk(this.nodes, n => { if (n[f.key] === o.value) used = true; });
-            if (used && !out.some(x => x.label === o.label))
-              out.push({ label:o.label, color:o.color, kind:'badge' });
-          });
+      // Emit in schema/option declaration order — same order the old
+      // per-option-walk version produced, not first-seen-in-tree order.
+      badgeFields.forEach((f, i) => {
+        f.options.forEach(o => {
+          if (usedValues[i].has(o.value) && !out.some(x => x.label === o.label))
+            out.push({ label:o.label, color:o.color, kind:'badge' });
         });
       });
-      let dashed = false;
-      walk(this.nodes, n => { if (n.dashed) dashed = true; });
       if (dashed) out.push({ label:'Outside the boundary', color:null, kind:'dashed' });
       return out;
     },
@@ -2065,8 +2091,8 @@ const _app = createApp({
     // Same lookup subOf uses, but returns the field def so callers can write
     // back to node[f.key] as well as read it (inline description editing).
     subField(node, depth){
-      return this.fieldsOf(node, depth).find(f => f.sub) ||
-             this.fieldsOf(node, depth).find(f => f.type === 'textarea') || null;
+      const fs = this.fieldsOf(node, depth);
+      return fs.find(f => f.sub) || fs.find(f => f.type === 'textarea') || null;
     },
     badgesOf(node, depth, bg){
       return this.fieldsOf(node, depth)
@@ -2258,16 +2284,6 @@ const _app = createApp({
       // this method, so cancelling the confirm still discarded in-progress
       // field edits. Tile × does not need a separate close.
       if (this.modal && this.modal.data && this.modal.data.id === id) this.closeModal();
-    },
-    move(id, dir){
-      const hit = locate(this.nodes, id);
-      if (!hit) return;
-      const j = hit.index + dir;
-      if (j < 0 || j >= hit.list.length) return;
-      const arr = hit.list;
-      [arr[hit.index], arr[j]] = [arr[j], arr[hit.index]];
-      const name = this.primaryOf(arr[j], hit.depth);
-      this.reorderMsg = 'Moved ' + name + ' to position ' + (j + 1) + ' of ' + arr.length + '.';
     },
     // Insert at an arbitrary position among the node's own siblings. Used
     // by drag-and-drop (targetIndex comes from the drop indicator: 0 = make

@@ -89,7 +89,14 @@ The **View / Edit** toggle at the top switches the whole page between:
   layers you leave open are the layers everyone sees when the file is
   next opened.
 
-Switching modes doesn't change or discard anything.
+Switching modes doesn't change or discard anything. **If you have
+unsaved changes, Save and the ● unsaved changes pill stay visible even
+after you switch to View** — flipping to View to preview your work
+before committing to it doesn't hide the only control that persists
+it. Add, Save as…, Import…, and the You: name control stay Edit-only;
+View-with-unsaved-changes can only save what's already pending, not
+create or migrate anything new. Once you save (or if you never edited
+anything), View goes back to its clean reviewer chrome — no toolbar.
 
 ## Reading the drawing
 
@@ -281,7 +288,9 @@ layout, frame, detail, or depth.
 
 ## Saving
 
-The toolbar has these file controls in Edit mode:
+The toolbar has these file controls in Edit mode. **Save** and the
+**unsaved changes** pill also stay visible in **View** whenever there
+are unsaved changes — see [Two modes](#two-modes-view-and-edit).
 
 - **Save updated file** — writes your changes back into this same file.
 - **Save as…** — writes to a new file (a branch or backup).
