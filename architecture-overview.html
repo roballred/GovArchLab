@@ -712,20 +712,32 @@
       </div>
     </div>
 
-    <div class="toolbar" v-if="mode==='edit'">
-      <button class="btn primary" @click="openAdd(null, 0)" title="Add item">+ Add</button>
-      <button class="btn primary" @click="saveFile(false)" :title="boundName ? ('Save changes to ' + boundName + '. The browser may ask once per tab-open to reconfirm access; after that, saves are silent and in-place.') : 'First save: pick this file in the dialog to bind it. Subsequent saves in this tab (and future opens of the same file) will write straight to disk in Chrome/Edge. Other browsers download a copy instead.'">{{ boundName ? 'Save → ' + boundName : 'Save updated file' }}</button>
-      <button class="btn" v-if="canPickFile" @click="saveFile(true)" title="Pick a different file to write to instead of overwriting the current one">Save as…</button>
-      <button class="btn" @click="importFromFile"
+    <!-- Save must stay reachable whenever there ARE unsaved changes, even in
+         View — View is documented as read-only preview, but people flip to
+         it to preview before saving, and the old v-if="mode==='edit'" made
+         the dirty pill AND the only Save control both vanish the moment you
+         did. beforeunload still warns on tab close, but that doesn't help
+         someone who previews, likes it, and closes the file thinking View
+         meant saved. Add / Save as… / Import / You: stay Edit-only — View
+         still can't create, migrate, or attribute; it can only persist
+         what's already pending. See issue #42. -->
+    <div class="toolbar" v-if="mode==='edit' || dirty || savedFlash">
+      <button class="btn primary" v-if="mode==='edit'" @click="openAdd(null, 0)" title="Add item">+ Add</button>
+      <button class="btn primary" v-if="mode==='edit' || dirty" @click="saveFile(false)"
+              :title="boundName ? ('Save changes to ' + boundName + '. The browser may ask once per tab-open to reconfirm access; after that, saves are silent and in-place.') : 'First save: pick this file in the dialog to bind it. Subsequent saves in this tab (and future opens of the same file) will write straight to disk in Chrome/Edge. Other browsers download a copy instead.'">{{ boundName ? 'Save → ' + boundName : 'Save updated file' }}</button>
+      <button class="btn" v-if="mode==='edit' && canPickFile" @click="saveFile(true)" title="Pick a different file to write to instead of overwriting the current one">Save as…</button>
+      <button class="btn" v-if="mode==='edit'" @click="importFromFile"
               title="Load the drawing (layers, items, comments, title block, notes) from another architecture-overview.html file into this one. Use this to migrate content from an older engine version to a newer one. Schema and file location stay as-is.">Import…</button>
       <!-- Fallback file picker for Firefox / Safari (no showOpenFilePicker).
-           Hidden off-screen; importFromFile() clicks it programmatically. -->
-      <input type="file" ref="importInput" accept=".html,.htm,text/html"
+           Hidden off-screen; importFromFile() clicks it programmatically.
+           Import is Edit-only (button above is gated the same way), so this
+           only needs to exist while the toolbar is showing its Edit set. -->
+      <input v-if="mode==='edit'" type="file" ref="importInput" accept=".html,.htm,text/html"
              style="position:absolute;left:-9999px;top:0;width:1px;height:1px;overflow:hidden"
              aria-hidden="true" tabindex="-1">
       <span class="dirty" v-if="dirty"><span class="d"></span>unsaved changes</span>
       <span class="saved" v-if="savedFlash">&#10003; {{ savedFlash }}</span>
-      <button type="button" class="whoami" @click="askAuthor(true)" title="Change the name your edits and comments are attributed to (stored in your browser only, not in the file)">{{ author ? 'You: ' + author : 'Set your name' }}<span class="sr-only"> — used to attribute your edits and comments</span></button>
+      <button type="button" class="whoami" v-if="mode==='edit'" @click="askAuthor(true)" title="Change the name your edits and comments are attributed to (stored in your browser only, not in the file)">{{ author ? 'You: ' + author : 'Set your name' }}<span class="sr-only"> — used to attribute your edits and comments</span></button>
     </div>
 
     <main id="content" :class="{sheet: isSheet}">
