@@ -718,7 +718,7 @@
 
     <div class="toolbar" v-if="mode==='edit'">
       <button class="btn primary" @click="openAdd(null, 0)" title="Add item">+ Add</button>
-      <button class="btn primary" @click="saveFile(false)" :title="boundName ? ('Save changes to ' + boundName + '. The browser may ask once per tab-open to reconfirm access; after that, saves are silent and in-place.') : 'First save: pick this file in the dialog to bind it. Subsequent saves in this tab (and future opens of the same file) will write straight to disk in Chrome/Edge. Other browsers download a copy instead.'">{{ boundName ? 'Save → ' + boundName : 'Save updated file' }}</button>
+      <button class="btn primary" @click="saveFile(false)" aria-keyshortcuts="Control+S Meta+S" :title="boundName ? ('Save changes to ' + boundName + '. The browser may ask once per tab-open to reconfirm access; after that, saves are silent and in-place.') : 'First save: pick this file in the dialog to bind it. Subsequent saves in this tab (and future opens of the same file) will write straight to disk in Chrome/Edge. Other browsers download a copy instead.'">{{ boundName ? 'Save → ' + boundName : 'Save updated file' }}</button>
       <button class="btn" v-if="canPickFile" @click="saveFile(true)" title="Pick a different file to write to instead of overwriting the current one">Save as…</button>
       <button class="btn" @click="importFromFile"
               title="Load the drawing (layers, items, comments, title block, notes) from another architecture-overview.html file into this one. Use this to migrate content from an older engine version to a newer one. Schema and file location stay as-is.">Import…</button>
@@ -1937,6 +1937,29 @@ const _app = createApp({
         if (h) { fileHandle = h; this.boundName = h.name; }
       }).catch(() => {}).finally(() => { this.handleLoadPromise = null; });
     }
+    // ⌘S / Ctrl+S: without this, the browser's own "Save Page As" fires
+    // instead — it serializes the LIVE DOM after Vue has mounted, which has
+    // already stripped every v-directive. That file has no editable
+    // template left; it's a dead copy, not buildFile() output. Always
+    // preventDefault on the key combo so that native save can never fire,
+    // then decide what OUR save should do:
+    //   - View + clean: swallow only. No point stamping a revision for
+    //     nothing, and there's nothing to save.
+    //   - Edit, or View + dirty (issue #42 keeps Save visible there too):
+    //     commit an editable, open modal first (saveNode() closes it via
+    //     the same path Save button uses), then run the real save.
+    //   - Modal open + readonly (a View-mode detail record): don't commit
+    //     it — there's nothing pending on a readonly modal — just fall
+    //     through to the file save if dirty.
+    this._onSaveKey = (e) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      if (e.key !== 's' && e.key !== 'S') return;
+      e.preventDefault();
+      if (this.mode !== 'edit' && !this.dirty) return;
+      if (this.modal && !this.modal.readonly) this.saveNode();
+      this.saveFile(false);
+    };
+    window.addEventListener('keydown', this._onSaveKey);
   },
   methods:{
     // A node just added into a collapsed parent would otherwise vanish from
