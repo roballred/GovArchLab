@@ -1963,6 +1963,29 @@ const _app = createApp({
         if (h) { fileHandle = h; this.boundName = h.name; }
       }).catch(() => {}).finally(() => { this.handleLoadPromise = null; });
     }
+    // ⌘S / Ctrl+S: without this, the browser's own "Save Page As" fires
+    // instead — it serializes the LIVE DOM after Vue has mounted, which has
+    // already stripped every v-directive. That file has no editable
+    // template left; it's a dead copy, not buildFile() output. Always
+    // preventDefault on the key combo so that native save can never fire,
+    // then decide what OUR save should do:
+    //   - View + clean: swallow only. No point stamping a revision for
+    //     nothing, and there's nothing to save.
+    //   - Edit, or View + dirty (issue #42 keeps Save visible there too):
+    //     commit an editable, open modal first (saveNode() closes it via
+    //     the same path Save button uses), then run the real save.
+    //   - Modal open + readonly (a View-mode detail record): don't commit
+    //     it — there's nothing pending on a readonly modal — just fall
+    //     through to the file save if dirty.
+    this._onSaveKey = (e) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      if (e.key !== 's' && e.key !== 'S') return;
+      e.preventDefault();
+      if (this.mode !== 'edit' && !this.dirty) return;
+      if (this.modal && !this.modal.readonly) this.saveNode();
+      this.saveFile(false);
+    };
+    window.addEventListener('keydown', this._onSaveKey);
   },
   methods:{
     // A node just added into a collapsed parent would otherwise vanish from

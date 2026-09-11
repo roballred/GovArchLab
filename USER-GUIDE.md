@@ -487,6 +487,16 @@ pages) or a real-world layer with 50+ items.
 
 ## Keyboard and accessibility
 
+- **⌘S / Ctrl+S saves the drawing** — runs the app's own save path
+  (in-place in Chrome/Edge, download-a-copy elsewhere), exactly like
+  clicking the Save button. If you have a detail modal open with
+  pending field changes, they're committed first, then the file
+  saves. **Do not use your browser's own Save Page As / Cmd+S-before-
+  this-existed habit against this file** — a raw browser save writes
+  the live, Vue-compiled DOM to disk, which has already lost every
+  editable directive. That file can no longer be edited by this
+  engine. The in-app shortcut always intercepts the key combo so this
+  can't happen by accident once you've loaded the page.
 - Full keyboard navigation via Tab / Shift-Tab.
 - Every interactive control has a visible focus outline (3px blue ring
   with a 2px offset — clears WCAG 2.1 AA 1.4.11).
